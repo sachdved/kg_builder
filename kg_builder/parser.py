@@ -137,6 +137,7 @@ def _extract_class(
         type=EntityType.CLASS,
         file_path=file_path,
         line_number=node.lineno,
+        end_line=getattr(node, 'end_lineno', None),
         properties=properties,
     )
     entities.append(entity)
@@ -193,6 +194,7 @@ def _extract_function(
         type=entity_type,
         file_path=file_path,
         line_number=node.lineno,
+        end_line=getattr(node, 'end_lineno', None),
         properties=properties,
     )
     entities.append(entity)

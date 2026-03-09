@@ -17,6 +17,8 @@ Example usage:
 
 from kg_builder.models import Entity, EntityType, KnowledgeGraph, Relationship, RelationshipType
 from kg_builder.parser import parse_file
+from kg_builder.query_engine import KGQueryEngine
+from kg_builder.symbol_resolver import SymbolResolver
 
 
 def build_knowledge_graph(
@@ -74,6 +76,16 @@ def build_knowledge_graph(
             # Skip files that can't be processed
             continue
 
+    # Build indices for fast lookups
+    kg._build_indices()
+
+    # Resolve imports across files
+    resolver = SymbolResolver(kg)
+    resolver.build_symbol_table()
+    resolved_rels = resolver.create_resolved_relationships()
+    for rel in resolved_rels:
+        kg.add_relationship(rel)
+
     return kg
 
 
@@ -85,4 +97,6 @@ __all__ = [
     "RelationshipType",
     "parse_file",
     "build_knowledge_graph",
+    "KGQueryEngine",
+    "SymbolResolver",
 ]
