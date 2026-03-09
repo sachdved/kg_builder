@@ -6,6 +6,149 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 kg_builder is a tool that extracts knowledge graphs from Python codebases using AST parsing. It identifies entities (classes, functions, variables, imports) and captures relationships between them (CONTAINS, CALLS, INHERITS, IMPORTS, INSTANTIATES, DEFINES_IN).
 
+---
+
+## ⚠️ BEFORE MODIFYING CODE - Use Knowledge Graph First
+
+**Always query the knowledge graph to understand code structure and impact.**
+
+### Quick Start: Understand a Function Before Changes
+
+```python
+from kg_builder.agent_helper import understand_function
+
+# Get context about what you're about to modify
+info = understand_function("function_name")
+if info["success"]:
+    print(f"Found at: {info['function']['file_path']}")
+    print(f"Called by: {info['called_by']}")
+```
+
+### Before Refactoring: Check Impact
+
+```python
+from kg_builder.agent_helper import analyze_impact
+
+impact = analyze_impact("ClassName", depth=2)
+if impact["risk_level"] == "HIGH":
+    print(f"Warning: {impact['reasons']}")  # Plan careful testing
+```
+
+### Finding Related Code (for extraction/refactoring)
+
+```python
+from kg_builder.agent_helper import find_all_by_pattern
+
+# Find all functions matching a pattern
+validators = find_all_by_pattern("validate", "FUNCTION")
+```
+
+### Helper Functions Reference
+
+| Task | Use This Function |
+|------|-------------------|
+| Before modifying a function | `understand_function(name)` |
+| Before refactoring/deleting | `analyze_impact(name, depth=2)` |
+| Extract common patterns | `find_all_by_pattern(pattern, entity_type)` |
+| Check module dependencies | `get_import_deps(file_path)` |
+
+### Low-Level Tools (for fine-grained control)
+
+```python
+from kg_builder.tools import (
+    KGCacheManager,      # Caches KG for fast repeated queries
+    kg_find_entity,      # Search entities by name
+    kg_get_neighbors,    # Get connected entities
+    kg_extract_context,  # Load code snippets organized by file
+    kg_get_callers,      # Find who calls this entity
+    kg_traverse,         # Multi-hop traversal with stats
+    kg_resolve_import,   # Resolve imports to definitions
+)
+```
+
+---
+
+## BEFORE MODIFYING CODE - Knowledge Graph Guidelines
+
+**Always query the knowledge graph first to understand code structure and impact.**
+
+### 1. Understanding a Function Before Changes
+
+```python
+from kg_builder.agent_helper import understand_function
+
+# Get context about what you're about to modify
+info = understand_function("function_name")
+if info["success"]:
+    print(f"Found at: {info['function']['file_path']}")
+    print(f"Called by: {info['called_by']}")
+    # Use info['context'] for actual code snippets
+```
+
+### 2. Impact Analysis Before Refactoring
+
+```python
+from kg_builder.agent_helper import analyze_impact
+
+# Check what breaks if you change this
+impact = analyze_impact("ClassName", depth=2)
+if impact["risk_level"] == "HIGH":
+    print(f"Warning: {impact['reasons']}")
+    # Plan careful testing strategy
+```
+
+### 3. Finding Related Code for Refactoring
+
+```python
+from kg_builder.agent_helper import find_all_by_pattern
+
+# Find all functions matching a pattern (e.g., for extraction)
+validators = find_all_by_pattern("validate", "FUNCTION")
+for v in validators:
+    print(f"{v['name']} at {v['file_path']}")
+```
+
+### 4. Understanding Import Dependencies
+
+```python
+from kg_builder.agent_helper import get_import_deps
+
+# See what modules a file depends on
+deps = get_import_deps("kg_builder/parser.py")
+print(f"Internal imports: {len(deps['internal_imports'])}")
+print(f"External imports: {len(deps['external_imports'])}")
+```
+
+### When to Use Each Function
+
+| Task | Use This Function |
+|------|------------------|
+| Before modifying a function | `understand_function()` |
+| Before refactoring/deleting | `analyze_impact()` |
+| Extracting common patterns | `find_all_by_pattern()` |
+| Checking module dependencies | `get_import_deps()` |
+
+### Tool Functions (Programmatic Access)
+
+For fine-grained control, use the tool functions directly:
+
+```python
+from kg_builder.tools import (
+    KGCacheManager,  # Caches KG for fast repeated queries
+    kg_find_entity,  # Search entities by name
+    kg_get_neighbors,  # Get connected entities
+    kg_extract_context,  # Load code snippets
+    kg_get_callers,  # Find who calls this
+    kg_traverse,  # Multi-hop traversal
+    kg_resolve_import,  # Resolve imports to definitions
+)
+
+# Example: Build cached KG and query
+cache = KGCacheManager(".")
+kg = cache.get_or_build()
+result = kg_find_entity(kg, "parse_file")
+```
+
 ## Commands
 
 ```bash

@@ -90,13 +90,28 @@ def build_knowledge_graph(
 
 
 __all__ = [
+    # Core models
     "Entity",
     "EntityType",
     "KnowledgeGraph",
     "Relationship",
     "RelationshipType",
+    # Main API
     "parse_file",
     "build_knowledge_graph",
     "KGQueryEngine",
     "SymbolResolver",
+    # Agent helpers (use before modifying code)
+    "understand_function",
+    "analyze_impact",
+    "find_all_by_pattern",
+    "get_import_deps",
 ]
+
+# Import agent helpers for convenience
+from kg_builder.agent_helper import (  # noqa: E402
+    understand_function,
+    analyze_impact,
+    find_all_by_pattern,
+    get_import_deps,
+)
