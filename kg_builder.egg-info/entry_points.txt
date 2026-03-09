@@ -1,0 +1,2 @@
+[console_scripts]
+kg_builder = kg_builder.cli:main

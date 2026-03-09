@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="45" fill="#2E86AB" opacity="0.1"/>
+  <circle cx="50" cy="50" r="40" stroke="#2E86AB" stroke-width="4" fill="none"/>
+
+  <!-- Node connections -->
+  <line x1="50" y1="15" x2="50" y2="35" stroke="#2E86AB" stroke-width="2"/>
+  <line x1="50" y1="85" x2="50" y2="65" stroke="#A23B72" stroke-width="2"/>
+  <line x1="15" y1="50" x2="35" y2="50" stroke="#F18F01" stroke-width="2"/>
+  <line x1="85" y1="50" x2="65" y2="50" stroke="#6A994E" stroke-width="2"/>
+
+  <!-- Center node -->
+  <circle cx="50" cy="50" r="12" fill="#3B528B"/>
+
+  <!-- Satellite nodes -->
+  <circle cx="50" cy="15" r="6" fill="#2E86AB"/>
+  <circle cx="50" cy="85" r="6" fill="#A23B72"/>
+  <circle cx="15" cy="50" r="6" fill="#F18F01"/>
+  <circle cx="85" cy="50" r="6" fill="#6A994E"/>
+</svg>
