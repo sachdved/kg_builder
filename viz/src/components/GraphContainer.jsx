@@ -9,6 +9,7 @@ cytoscape.use(fcose);
 
 import { generateStylesheet } from '../utils/styler';
 import { applyLayout, resetStyling, focusOnNode } from '../utils/graphHelpers';
+import { getFocusedElements, getFocusStats } from '../utils/neighborTraversal';
 
 const GraphContainer = ({
   nodes,
@@ -20,7 +21,11 @@ const GraphContainer = ({
   onElementClick,
   layout = 'forceDirected',
   isLoading = false,
-  onRightClick
+  onRightClick,
+  focusMode = false,
+  focusedNodeId = null,
+  focusDepth = 1,
+  focusDirection = 'both' // 'both' | 'incoming' | 'outgoing'
 }) => {
   const containerRef = useRef(null);
   const cyRef = useRef(null);
@@ -112,16 +117,26 @@ const GraphContainer = ({
     cy.add({ group: 'nodes', data: {} }); // Placeholder to keep instance alive
     cy.elements().remove(); // Clear existing elements
 
+    let displayNodes = nodes;
+    let displayEdges = edges;
+
+    // Apply focus mode filtering if enabled
+    if (focusMode && focusedNodeId) {
+      const focusedResult = getFocusedElements(nodes, edges, focusedNodeId, focusDepth, focusDirection);
+      displayNodes = focusedResult.nodes;
+      displayEdges = focusedResult.edges;
+    }
+
     // Prepare node data with filter status
     const filteredNodeIds = new Set(
-      nodes
+      displayNodes
         .filter(n => filteredTypes.has(n.data.type))
         .map(n => n.data.id)
     );
 
     // Add all nodes (will be styled based on filter)
     cy.add(
-      nodes.map(node => ({
+      displayNodes.map(node => ({
         group: 'nodes',
         data: { ...node.data, dimmed: !filteredNodeIds.has(node.data.id) }
       }))
@@ -129,7 +144,7 @@ const GraphContainer = ({
 
     // Add edges that connect visible nodes
     const visibleEdgeData = [];
-    edges.forEach(edge => {
+    displayEdges.forEach(edge => {
       const sourceVisible = filteredNodeIds.has(edge.data.source);
       const targetVisible = filteredNodeIds.has(edge.data.target);
       const dimmed = !sourceVisible || !targetVisible;
@@ -158,7 +173,7 @@ const GraphContainer = ({
 
     // Apply layout
     applyLayout(cy, layout);
-  }, [nodes, edges, filteredTypes, layout, isLoading]);
+  }, [nodes, edges, filteredTypes, layout, isLoading, focusMode, focusedNodeId, focusDepth, focusDirection]);
 
   // Highlight nodes on search match
   useEffect(() => {

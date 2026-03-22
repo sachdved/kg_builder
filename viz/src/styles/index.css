@@ -788,6 +788,18 @@ select.btn {
   border-color: #246a8a;
 }
 
+/* Secondary button style */
+.btn-secondary {
+  background-color: var(--color-warning);
+  color: #ffffff;
+  border-color: var(--color-warning);
+}
+
+.btn-secondary:hover {
+  background-color: #d67f01;
+  border-color: #d67f01;
+}
+
 /* Error button style for confirmations */
 .btn-error {
   background-color: var(--color-error);

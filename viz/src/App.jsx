@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 
 // Components
 import GraphContainer from './components/GraphContainer';
@@ -11,11 +11,13 @@ import ContextMenu from './components/ContextMenu';
 import ConfirmationDialog from './components/ConfirmationDialog';
 import NewNodeModal from './components/NewNodeModal';
 import NewEdgeModal from './components/NewEdgeModal';
+import FocusPanel from './components/FocusPanel';
 
 // Utils
 import { parseKGToElements, getKGStats } from './utils/kgParser';
 import { entityColors, relationshipColors, nodeShapes } from './utils/styler';
 import { resetStyling, applyLayout } from './utils/graphHelpers';
+import { getFocusStats, getNodeNeighborsByDirection } from './utils/neighborTraversal';
 import {
   createUndoRedoState,
   saveToHistory,
@@ -31,6 +33,7 @@ const App = () => {
   const [kgData, setKgData] = useState(null);
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
+  const [totalNodesCount, setTotalNodesCount] = useState(0);
   const [stats, setStats] = useState({ totalEntities: 0, totalRelationships: 0 });
 
   // UI state
@@ -70,6 +73,13 @@ const App = () => {
   // Modal states
   const [showNewNodeModal, setShowNewNodeModal] = useState(false);
   const [showNewEdgeModal, setShowNewEdgeModal] = useState(false);
+
+  // Focus mode state
+  const [focusMode, setFocusMode] = useState(false);
+  const [focusedNodeId, setFocusedNodeId] = useState(null);
+  const [focusDepth, setFocusDepth] = useState(1);
+  const [focusDirection, setFocusDirection] = useState('both'); // 'both' | 'incoming' | 'outgoing'
+  const focusedNodeNameRef = useRef('');
 
   // Cytoscape instance ref (accessible from GraphContainer via forwardRef if needed)
   const cyInstanceRef = useRef(null);
@@ -116,7 +126,9 @@ const App = () => {
           e => nodeIds.has(e.data.source) && nodeIds.has(e.data.target)
         );
 
+        setTotalNodesCount(parsedNodes.length); // Track total nodes for focus mode stats
         setNodes(limitedNodes);
+        setTotalNodesCount(parsedNodes.length); // Track total before limiting
         setEdges(limitedEdges);
         setStats(getKGStats(json));
 
@@ -307,6 +319,65 @@ const App = () => {
       // Highlight neighbors
       const neighbors = node.neighborhood();
       setHighlightedNodes([node.id(), ...neighbors.map(n => n.id())]);
+
+      // Enter focus mode and get node name
+      setFocusedNodeId(entityId);
+      setFocusMode(true);
+      const entityData = kgData?.entities?.[entityId];
+      focusedNodeNameRef.current = entityData?.name || entityId;
+    }
+  }, [kgData]);
+
+  // Handle entering focus mode for a specific entity
+  const handleEnterFocusMode = useCallback((entityId) => {
+    if (!cyInstanceRef.current) return;
+
+    const cy = cyInstanceRef.current;
+    const node = cy.$(`node[id="${entityId}"]`);
+
+    if (node.length > 0) {
+      setFocusedNodeId(entityId);
+      setFocusMode(true);
+      setFocusDepth(1); // Reset to default depth
+
+      const entityData = kgData?.entities?.[entityId];
+      focusedNodeNameRef.current = entityData?.name || entityId;
+
+      // Highlight the focused node
+      resetStyling(cy);
+      cy.elements().unselect();
+      node.select();
+      setSelectedElement(node);
+
+      // Fit view to focus area
+      setTimeout(() => {
+        cy.fit({
+          padding: 50,
+          duration: 300,
+          ele: node
+        });
+      }, 100);
+    }
+  }, [kgData]);
+
+  // Handle exiting focus mode
+  const handleExitFocusMode = useCallback(() => {
+    setFocusMode(false);
+    setFocusedNodeId(null);
+    setFocusDirection('both'); // Reset direction to default
+    setHighlightedNodes([]);
+    focusedNodeNameRef.current = '';
+
+    if (cyInstanceRef.current) {
+      resetStyling(cyInstanceRef.current);
+      cyInstanceRef.current.elements().unselect();
+      setSelectedElement(null);
+
+      // Optionally zoom out to show full graph
+      cyInstanceRef.current.fit({
+        padding: 50,
+        duration: 300
+      });
     }
   }, []);
 
@@ -747,12 +818,17 @@ const App = () => {
         setContextMenu({ visible: false, x: 0, y: 0, element: null });
         setShowNewNodeModal(false);
         setShowNewEdgeModal(false);
+
+        // Exit focus mode on escape
+        if (focusMode) {
+          handleExitFocusMode();
+        }
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [handleUndo, handleRedo, selectedElement, kgData]);
+  }, [handleUndo, handleRedo, selectedElement, kgData, focusMode, handleExitFocusMode]);
 
   // Expose cy instance for use in event handlers
   useEffect(() => {
@@ -760,6 +836,51 @@ const App = () => {
       cyInstanceRef.current.cy = cyInstanceRef.current.current;
     }
   });
+
+  // Calculate visible node and edge count based on focus mode
+  const visibleCountInfo = useMemo(() => {
+    if (!focusMode || !focusedNodeId || nodes.length === 0) {
+      return {
+        visibleNodes: nodes.length,
+        visibleEdges: edges.length,
+        totalNodes: totalNodesCount,
+        totalEdges: edges.length,
+        indegree: 0,
+        outdegree: 0,
+        incomingNeighborCount: 0,
+        outgoingNeighborCount: 0
+      };
+    }
+
+    const stats = getFocusStats(nodes, edges, focusedNodeId, focusDepth, focusDirection);
+
+    // Get direct neighbor counts for the focused node (1-hop)
+    const neighbors = getNodeNeighborsByDirection(nodes, edges, focusedNodeId);
+    const indegree = neighbors.incoming.length;
+    const outdegree = neighbors.outgoing.length;
+
+    // Count how many of those are visible based on direction filter
+    let incomingNeighborCount = 0;
+    let outgoingNeighborCount = 0;
+
+    if (focusDirection === 'both' || focusDirection === 'incoming') {
+      incomingNeighborCount = indegree;
+    }
+    if (focusDirection === 'both' || focusDirection === 'outgoing') {
+      outgoingNeighborCount = outdegree;
+    }
+
+    return {
+      visibleNodes: stats.visibleNodes,
+      visibleEdges: stats.visibleEdges,
+      totalNodes: stats.totalNodes,
+      totalEdges: stats.totalEdges,
+      indegree,
+      outdegree,
+      incomingNeighborCount,
+      outgoingNeighborCount
+    };
+  }, [focusMode, focusedNodeId, focusDepth, focusDirection, nodes, edges, totalNodesCount]);
 
   return (
     <div className="app-container">
@@ -776,8 +897,8 @@ const App = () => {
 
       {/* Toolbar */}
       <Toolbar
-        nodeCount={nodes.length}
-        edgeCount={edges.length}
+        nodeCount={visibleCountInfo.visibleNodes}
+        edgeCount={visibleCountInfo.visibleEdges}
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onResetView={handleResetView}
@@ -828,6 +949,10 @@ const App = () => {
           onRightClick={handleRightClick}
           layout={currentLayout}
           isLoading={isLoading}
+          focusMode={focusMode}
+          focusedNodeId={focusedNodeId}
+          focusDepth={focusDepth}
+          focusDirection={focusDirection}
         />
 
         {/* Details Sidebar */}
@@ -874,6 +999,24 @@ const App = () => {
           onClose={() => setShowNewEdgeModal(false)}
           onAdd={handleAddRelationship}
           entities={kgData?.entities || {}}
+        />
+
+        {/* Focus Panel - shows when in focus mode */}
+        <FocusPanel
+          focusMode={focusMode}
+          focusedNodeId={focusedNodeId}
+          focusedNodeName={focusedNodeNameRef.current}
+          focusDepth={focusDepth}
+          setFocusDepth={setFocusDepth}
+          focusDirection={focusDirection}
+          setFocusDirection={setFocusDirection}
+          visibleNodesCount={visibleCountInfo.visibleNodes}
+          totalNodesCount={visibleCountInfo.totalNodes}
+          indegree={visibleCountInfo.indegree}
+          outdegree={visibleCountInfo.outdegree}
+          incomingNeighborCount={visibleCountInfo.incomingNeighborCount}
+          outgoingNeighborCount={visibleCountInfo.outgoingNeighborCount}
+          onExit={handleExitFocusMode}
         />
       </main>
     </div>
