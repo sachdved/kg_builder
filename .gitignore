@@ -3,3 +3,6 @@
 viz/.ipynb_checkpoints/
 viz/node_modules/
 outputs/
+output/
+kg_builder/__pycache__/
+tests/__pycache__/
