@@ -75,7 +75,7 @@ export const generateStylesheet = () => [
       'background-color': '#fafafa'
     }
   },
-  // Default node styles
+  // Default node styles — labels hidden by default
   {
     selector: 'node',
     style: {
@@ -83,11 +83,20 @@ export const generateStylesheet = () => [
       shape: 'circle',
       width: 14,
       height: 14,
-      'text-valign': 'center',
+      label: 'data(name)',
+      'text-valign': 'bottom',
       'text-halign': 'center',
-      'font-size': '8px',
-      'text-outline-width': 1,
-      'text-outline-color': '#ffffff'
+      'text-margin-y': 4,
+      'font-size': '9px',
+      'font-weight': 'normal',
+      'text-outline-width': 2,
+      'text-outline-color': '#ffffff',
+      'text-outline-opacity': 1,
+      'color': '#333333',
+      'text-opacity': 0,
+      'text-max-width': '80px',
+      'text-wrap': 'ellipsis',
+      'min-zoomed-font-size': 0
     }
   },
   // Node styles by type
@@ -100,12 +109,14 @@ export const generateStylesheet = () => [
       height: nodeSizes[type]
     }
   })),
-  // Selected nodes
+  // Selected nodes — border + always show label
   {
     selector: 'node:selected',
     style: {
       'border-width': 3,
-      'border-color': '#333333'
+      'border-color': '#333333',
+      'text-opacity': 1,
+      'font-weight': 'bold'
     }
   },
   // Highlighted nodes (neighbors)
@@ -116,11 +127,29 @@ export const generateStylesheet = () => [
       'border-color': '#333333'
     }
   },
+  // Hover label — shown on mouseover
+  {
+    selector: 'node.hover',
+    style: {
+      'text-opacity': 1,
+      'font-size': '10px',
+      'font-weight': 'bold',
+      'z-index': 999
+    }
+  },
+  // Zoom-adaptive labels — shown when zoomed in
+  {
+    selector: 'node.show-label',
+    style: {
+      'text-opacity': 1
+    }
+  },
   // Dimmed nodes (filtered out)
   {
-    selector: 'node:dimmed',
+    selector: 'node.dimmed',
     style: {
       'background-opacity': 0.15,
+      'text-opacity': 0,
       width: 6,
       height: 6
     }
@@ -162,7 +191,7 @@ export const generateStylesheet = () => [
   },
   // Dimmed edges
   {
-    selector: 'edge:dimmed',
+    selector: 'edge.dimmed',
     style: {
       'line-opacity': 0.15,
       'target-arrow-opacity': 0.15

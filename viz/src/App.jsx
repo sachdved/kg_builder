@@ -2,7 +2,6 @@ import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 
 // Components
 import GraphContainer from './components/GraphContainer';
-import Sidebar from './components/Sidebar';
 import SearchBar from './components/SearchBar';
 import FilterPanel from './components/FilterPanel';
 import Toolbar from './components/Toolbar';
@@ -11,7 +10,6 @@ import ContextMenu from './components/ContextMenu';
 import ConfirmationDialog from './components/ConfirmationDialog';
 import NewNodeModal from './components/NewNodeModal';
 import NewEdgeModal from './components/NewEdgeModal';
-import FocusPanel from './components/FocusPanel';
 
 // Utils
 import { parseKGToElements, getKGStats } from './utils/kgParser';
@@ -81,8 +79,13 @@ const App = () => {
   const [focusDirection, setFocusDirection] = useState('both'); // 'both' | 'incoming' | 'outgoing'
   const focusedNodeNameRef = useRef('');
 
-  // Cytoscape instance ref (accessible from GraphContainer via forwardRef if needed)
+  // Cytoscape instance ref (populated via onCyInit callback from GraphContainer)
   const cyInstanceRef = useRef(null);
+
+  // Callback to receive the Cytoscape instance from GraphContainer
+  const handleCyInit = useCallback((cy) => {
+    cyInstanceRef.current = cy;
+  }, []);
 
   // Initialize undo state when kgData changes
   useEffect(() => {
@@ -126,9 +129,8 @@ const App = () => {
           e => nodeIds.has(e.data.source) && nodeIds.has(e.data.target)
         );
 
-        setTotalNodesCount(parsedNodes.length); // Track total nodes for focus mode stats
-        setNodes(limitedNodes);
         setTotalNodesCount(parsedNodes.length); // Track total before limiting
+        setNodes(limitedNodes);
         setEdges(limitedEdges);
         setStats(getKGStats(json));
 
@@ -155,26 +157,27 @@ const App = () => {
     event.target.value = '';
   }, []);
 
-  // Handle element click
+  // Handle element click — enter focus mode for nodes
   const handleElementClick = useCallback((element) => {
     setSelectedElement(element);
 
-    // Highlight neighbors on click
-    if (cyInstanceRef.current && element.isNode()) {
-      resetStyling(cyInstanceRef.current);
-      cyInstanceRef.current.elements().unselect();
-      element.select();
+    if (element.isNode()) {
+      const entityId = element.id();
+      setFocusedNodeId(entityId);
+      setFocusMode(true);
 
-      const node = element;
-      const neighbors = node.neighborhood();
+      const entityData = kgData?.entities?.[entityId];
+      focusedNodeNameRef.current = entityData?.name || entityId;
 
-      // Get node + neighbor IDs for highlighting
-      const ids = [node.id(), ...neighbors.map(n => n.id())];
-      setHighlightedNodes(ids);
+      if (cyInstanceRef.current) {
+        resetStyling(cyInstanceRef.current);
+        cyInstanceRef.current.elements().unselect();
+        element.select();
+      }
     } else {
       setHighlightedNodes([]);
     }
-  }, []);
+  }, [kgData]);
 
   // Handle right-click for context menu
   const handleRightClick = useCallback((contextInfo) => {
@@ -292,7 +295,7 @@ const App = () => {
     setHighlightedNodes(results.slice(0, 50)); // Limit for performance
   }, [kgData]);
 
-  // Handle entity selection from search
+  // Handle entity selection from search — enters focus mode
   const handleSelectEntity = useCallback((entityId) => {
     if (!cyInstanceRef.current) return;
 
@@ -304,59 +307,12 @@ const App = () => {
       cy.elements().unselect();
       node.select();
 
-      // Center view on selected node
-      const bounds = node.boundingBox();
-      cy.pan({
-        render: true,
-        duration: 300,
-        level: cy.zoom(),
-        x: bounds.x1 + bounds.width / 2,
-        y: bounds.y1 + bounds.height / 2
-      });
-
       setSelectedElement(node);
-
-      // Highlight neighbors
-      const neighbors = node.neighborhood();
-      setHighlightedNodes([node.id(), ...neighbors.map(n => n.id())]);
-
-      // Enter focus mode and get node name
       setFocusedNodeId(entityId);
       setFocusMode(true);
-      const entityData = kgData?.entities?.[entityId];
-      focusedNodeNameRef.current = entityData?.name || entityId;
-    }
-  }, [kgData]);
-
-  // Handle entering focus mode for a specific entity
-  const handleEnterFocusMode = useCallback((entityId) => {
-    if (!cyInstanceRef.current) return;
-
-    const cy = cyInstanceRef.current;
-    const node = cy.$(`node[id="${entityId}"]`);
-
-    if (node.length > 0) {
-      setFocusedNodeId(entityId);
-      setFocusMode(true);
-      setFocusDepth(1); // Reset to default depth
 
       const entityData = kgData?.entities?.[entityId];
       focusedNodeNameRef.current = entityData?.name || entityId;
-
-      // Highlight the focused node
-      resetStyling(cy);
-      cy.elements().unselect();
-      node.select();
-      setSelectedElement(node);
-
-      // Fit view to focus area
-      setTimeout(() => {
-        cy.fit({
-          padding: 50,
-          duration: 300,
-          ele: node
-        });
-      }, 100);
     }
   }, [kgData]);
 
@@ -364,16 +320,16 @@ const App = () => {
   const handleExitFocusMode = useCallback(() => {
     setFocusMode(false);
     setFocusedNodeId(null);
-    setFocusDirection('both'); // Reset direction to default
+    setFocusDepth(1);
+    setFocusDirection('both');
     setHighlightedNodes([]);
+    setSelectedElement(null);
     focusedNodeNameRef.current = '';
 
     if (cyInstanceRef.current) {
       resetStyling(cyInstanceRef.current);
       cyInstanceRef.current.elements().unselect();
-      setSelectedElement(null);
 
-      // Optionally zoom out to show full graph
       cyInstanceRef.current.fit({
         padding: 50,
         duration: 300
@@ -415,6 +371,21 @@ const App = () => {
     setSelectedRelationshipTypes(new Set([
       'CONTAINS', 'CALLS', 'INHERITS', 'IMPORTS', 'INSTANTIATES', 'DEFINES_IN'
     ]));
+
+    // Also exit focus mode to restore the full graph
+    setFocusMode(false);
+    setFocusedNodeId(null);
+    setFocusDepth(1);
+    setFocusDirection('both');
+    setSelectedElement(null);
+    setHighlightedNodes([]);
+    focusedNodeNameRef.current = '';
+
+    if (cyInstanceRef.current) {
+      resetStyling(cyInstanceRef.current);
+      cyInstanceRef.current.elements().unselect();
+      cyInstanceRef.current.fit({ padding: 50, duration: 300 });
+    }
   }, []);
 
   // Layout change handler
@@ -445,12 +416,19 @@ const App = () => {
 
   // Reset view
   const handleResetView = useCallback(() => {
+    // Exit focus mode
+    setFocusMode(false);
+    setFocusedNodeId(null);
+    setFocusDepth(1);
+    setFocusDirection('both');
+    setSelectedElement(null);
+    setHighlightedNodes([]);
+    setSearchQuery('');
+    focusedNodeNameRef.current = '';
+
     if (cyInstanceRef.current) {
       resetStyling(cyInstanceRef.current);
       cyInstanceRef.current.elements().unselect();
-      setSelectedElement(null);
-      setHighlightedNodes([]);
-      setSearchQuery('');
 
       cyInstanceRef.current.zoom({
         render: true,
@@ -830,13 +808,6 @@ const App = () => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleUndo, handleRedo, selectedElement, kgData, focusMode, handleExitFocusMode]);
 
-  // Expose cy instance for use in event handlers
-  useEffect(() => {
-    if (cyInstanceRef.current?.current) {
-      cyInstanceRef.current.cy = cyInstanceRef.current.current;
-    }
-  });
-
   // Calculate visible node and edge count based on focus mode
   const visibleCountInfo = useMemo(() => {
     if (!focusMode || !focusedNodeId || nodes.length === 0) {
@@ -925,7 +896,7 @@ const App = () => {
 
       {/* Main Content */}
       <main className="app-content">
-        {/* Sidebar with Filters and Details */}
+        {/* Left Sidebar: Filters */}
         <SidebarWrapper>
           <FilterPanel
             kgStats={stats}
@@ -946,11 +917,8 @@ const App = () => {
           filteredTypes={selectedEntityTypes}
           searchTerm={searchQuery}
           onElementClick={handleElementClick}
-          onDoubleClick={(element) => {
-            if (element.isNode()) {
-              handleEnterFocusMode(element.id());
-            }
-          }}
+          onCyInit={handleCyInit}
+          onBackgroundClick={handleExitFocusMode}
           onRightClick={handleRightClick}
           layout={currentLayout}
           isLoading={isLoading}
@@ -960,14 +928,18 @@ const App = () => {
           focusDirection={focusDirection}
         />
 
-        {/* Details Sidebar */}
-        {selectedElement && (
-          <DetailsSidebar
+        {/* Right Sidebar: unified details + focus controls */}
+        {focusMode && selectedElement && selectedElement.isNode && selectedElement.isNode() && (
+          <DetailFocusSidebar
             selectedElement={selectedElement}
             kgData={kgData}
-            onClose={() => setSelectedElement(null)}
+            focusDepth={focusDepth}
+            setFocusDepth={setFocusDepth}
+            focusDirection={focusDirection}
+            setFocusDirection={setFocusDirection}
+            visibleCountInfo={visibleCountInfo}
+            onClose={handleExitFocusMode}
             onUpdateEntity={handleUpdateEntity}
-            onEnterFocusMode={handleEnterFocusMode}
           />
         )}
 
@@ -1006,24 +978,6 @@ const App = () => {
           onAdd={handleAddRelationship}
           entities={kgData?.entities || {}}
         />
-
-        {/* Focus Panel - shows when in focus mode */}
-        <FocusPanel
-          focusMode={focusMode}
-          focusedNodeId={focusedNodeId}
-          focusedNodeName={focusedNodeNameRef.current}
-          focusDepth={focusDepth}
-          setFocusDepth={setFocusDepth}
-          focusDirection={focusDirection}
-          setFocusDirection={setFocusDirection}
-          visibleNodesCount={visibleCountInfo.visibleNodes}
-          totalNodesCount={visibleCountInfo.totalNodes}
-          indegree={visibleCountInfo.indegree}
-          outdegree={visibleCountInfo.outdegree}
-          incomingNeighborCount={visibleCountInfo.incomingNeighborCount}
-          outgoingNeighborCount={visibleCountInfo.outgoingNeighborCount}
-          onExit={handleExitFocusMode}
-        />
       </main>
     </div>
   );
@@ -1038,73 +992,203 @@ const SidebarWrapper = ({ children }) => {
   );
 };
 
-// Separate component for details to enable conditional rendering
-const DetailsSidebar = ({ selectedElement, kgData, onClose, onUpdateEntity, onEnterFocusMode }) => {
+// Unified right sidebar: entity details + focus/neighbor controls
+const DetailFocusSidebar = ({
+  selectedElement,
+  kgData,
+  focusDepth,
+  setFocusDepth,
+  focusDirection,
+  setFocusDirection,
+  visibleCountInfo,
+  onClose,
+  onUpdateEntity,
+}) => {
+  const entityId = selectedElement.id();
+  const entityData = kgData?.entities?.[entityId];
+
+  if (!entityData) return null;
+
+  const connections = getConnections(entityId, kgData);
+
   return (
-    <aside className="sidebar">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 16px' }}>
-        <h2 style={{ fontSize: '1rem', margin: 0 }}>Details</h2>
+    <aside className="sidebar" style={{ borderLeft: '1px solid var(--border-color)', borderRight: 'none' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 16px', borderBottom: '1px solid var(--border-color)' }}>
+        <h2 style={{ fontSize: '1rem', margin: 0 }}>Entity Details</h2>
         <button
           className="btn btn-icon"
           onClick={onClose}
           style={{ width: '24px', height: '24px', padding: 0 }}
+          title="Close and show full graph"
         >
           &times;
         </button>
       </div>
 
-      {selectedElement.isNode() ? (
-        <Sidebar
-          selectedElement={selectedElement}
-          kgData={kgData}
-          onClose={() => onClose()}
-          onUpdateEntity={onUpdateEntity}
-          onEnterFocusMode={onEnterFocusMode}
-        />
-      ) : (
-        <EdgeDetails edgeData={selectedElement.data()} kgData={kgData} />
-      )}
+      <div className="sidebar-content">
+        {/* Entity info */}
+        <div className="entity-detail">
+          <div className="entity-detail-header">
+            <span
+              className="entity-type-badge"
+              style={{ backgroundColor: entityColors[entityData.type] }}
+            >
+              {entityData.type}
+            </span>
+            <span className="entity-name">{escapeHtml(entityData.name)}</span>
+          </div>
+
+          <p className="entity-file-path">
+            {entityData.file_path}
+            {entityData.line_number ? `:L${entityData.line_number}` : ''}
+          </p>
+
+          {entityData.properties?.description && (
+            <div className="entity-docstring">
+              {escapeHtml(entityData.properties.description)}
+            </div>
+          )}
+        </div>
+
+        {/* Neighbor depth control */}
+        <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f0f7ff', borderRadius: '6px' }}>
+          <label htmlFor="focus-depth" style={{ fontSize: '0.8rem', fontWeight: 600, color: '#333', display: 'block', marginBottom: '6px' }}>
+            Neighbor Depth (k hops):
+          </label>
+          <select
+            id="focus-depth"
+            value={focusDepth}
+            onChange={(e) => setFocusDepth(parseInt(e.target.value, 10))}
+            style={{
+              width: '100%',
+              padding: '6px 8px',
+              borderRadius: '4px',
+              border: '1px solid #ccc',
+              fontSize: '0.85rem'
+            }}
+          >
+            <option value={1}>1 hop (direct neighbors)</option>
+            <option value={2}>2 hops</option>
+            <option value={3}>3 hops</option>
+            <option value={4}>4 hops</option>
+            <option value={5}>5 hops</option>
+          </select>
+
+          <label htmlFor="focus-direction" style={{ fontSize: '0.8rem', fontWeight: 600, color: '#333', display: 'block', marginTop: '10px', marginBottom: '6px' }}>
+            Direction:
+          </label>
+          <select
+            id="focus-direction"
+            value={focusDirection}
+            onChange={(e) => setFocusDirection(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '6px 8px',
+              borderRadius: '4px',
+              border: '1px solid #ccc',
+              fontSize: '0.85rem'
+            }}
+          >
+            <option value="both">Both Directions</option>
+            <option value="incoming">Incoming Only (Dependents)</option>
+            <option value="outgoing">Outgoing Only (Dependencies)</option>
+          </select>
+
+          <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '8px' }}>
+            Showing {visibleCountInfo.visibleNodes} of {visibleCountInfo.totalNodes} nodes
+          </p>
+        </div>
+
+        {/* Degree stats */}
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+          <div style={{ flex: 1, padding: '8px', backgroundColor: '#e8f5e9', borderRadius: '4px', textAlign: 'center' }}>
+            <p style={{ fontSize: '0.7rem', color: '#2e7d32', margin: 0 }}>Incoming</p>
+            <p style={{ fontSize: '1.1rem', fontWeight: 600, color: '#1b5e20', margin: 0 }}>{visibleCountInfo.indegree}</p>
+          </div>
+          <div style={{ flex: 1, padding: '8px', backgroundColor: '#fff3e0', borderRadius: '4px', textAlign: 'center' }}>
+            <p style={{ fontSize: '0.7rem', color: '#ef6c00', margin: 0 }}>Outgoing</p>
+            <p style={{ fontSize: '1.1rem', fontWeight: 600, color: '#e65100', margin: 0 }}>{visibleCountInfo.outdegree}</p>
+          </div>
+        </div>
+
+        {/* Incoming relationships */}
+        {connections.incoming > 0 && (
+          <div className="connection-group">
+            <div className="connection-header">Incoming Relationships</div>
+            <ul className="connection-list">
+              {connections.incomingList.slice(0, 10).map((conn, idx) => (
+                <li key={idx} className="connection-item">
+                  <span style={{ color: entityColors[conn.type] || '#666' }}>
+                    {conn.type}: {escapeHtml(conn.source)}
+                  </span>
+                </li>
+              ))}
+              {connections.incomingList.length > 10 && (
+                <li className="connection-item">... and {connections.incomingList.length - 10} more</li>
+              )}
+            </ul>
+          </div>
+        )}
+
+        {/* Outgoing relationships */}
+        {connections.outgoing > 0 && (
+          <div className="connection-group">
+            <div className="connection-header">Outgoing Relationships</div>
+            <ul className="connection-list">
+              {connections.outgoingList.slice(0, 10).map((conn, idx) => (
+                <li key={idx} className="connection-item">
+                  <span style={{ color: entityColors[conn.type] || '#666' }}>
+                    {conn.type}: {escapeHtml(conn.target)}
+                  </span>
+                </li>
+              ))}
+              {connections.outgoingList.length > 10 && (
+                <li className="connection-item">... and {connections.outgoingList.length - 10} more</li>
+              )}
+            </ul>
+          </div>
+        )}
+
+        {/* Properties */}
+        {Object.keys(entityData.properties || {}).length > 0 && (
+          <div className="connection-group">
+            <div className="connection-header">Properties</div>
+            <ul className="connection-list" style={{ maxHeight: '200px' }}>
+              {Object.entries(entityData.properties).map(([key, value]) => (
+                <li key={key} className="connection-item">
+                  <strong>{escapeHtml(key)}:</strong>{' '}
+                  {typeof value === 'string' ? escapeHtml(value) : JSON.stringify(value)}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
     </aside>
   );
 };
 
-const EdgeDetails = ({ edgeData, kgData }) => {
-  if (!edgeData) return null;
+const getConnections = (entityId, kgData) => {
+  if (!kgData?.relationships) {
+    return { incoming: 0, outgoing: 0, incomingList: [], outgoingList: [] };
+  }
 
-  const sourceEntity = kgData?.entities?.[edgeData.source];
-  const targetEntity = kgData?.entities?.[edgeData.target];
+  const incoming = [];
+  const outgoing = [];
 
-  return (
-    <div className="sidebar-content">
-      <span
-        style={{
-          display: 'inline-block',
-          padding: '2px 8px',
-          fontSize: '0.7rem',
-          fontWeight: 600,
-          borderRadius: '4px',
-          backgroundColor: relationshipColors[edgeData.rel] || '#999',
-          color: '#fff'
-        }}
-      >
-        {edgeData.rel}
-      </span>
+  kgData.relationships.forEach(rel => {
+    if (rel.target_id === entityId) {
+      const sourceEntity = kgData.entities[rel.source_id];
+      incoming.push({ type: rel.type, source: sourceEntity?.name || rel.source_id });
+    }
+    if (rel.source_id === entityId) {
+      const targetEntity = kgData.entities[rel.target_id];
+      outgoing.push({ type: rel.type, target: targetEntity?.name || rel.target_id });
+    }
+  });
 
-      <div style={{ marginTop: '16px' }}>
-        <p style={{ fontSize: '0.8rem', color: '#666' }}>From:</p>
-        <p style={{ fontWeight: 500, marginBottom: '12px' }}>{escapeHtml(sourceEntity?.name || edgeData.source)}</p>
-
-        <p style={{ fontSize: '0.8rem', color: '#666' }}>To:</p>
-        <p style={{ fontWeight: 500 }}>{escapeHtml(targetEntity?.name || edgeData.target)}</p>
-
-        {edgeData.lineNumber && (
-          <p style={{ marginTop: '12px', fontSize: '0.85rem', color: '#666' }}>
-            Line: {edgeData.lineNumber}
-          </p>
-        )}
-      </div>
-    </div>
-  );
+  return { incoming: incoming.length, outgoing: outgoing.length, incomingList: incoming, outgoingList: outgoing };
 };
 
 const escapeHtml = (text) => {

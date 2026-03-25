@@ -23,6 +23,8 @@ const GraphContainer = ({
   isLoading = false,
   onRightClick,
   onDoubleClick,
+  onCyInit,
+  onBackgroundClick,
   focusMode = false,
   focusedNodeId = null,
   focusDepth = 1,
@@ -60,6 +62,9 @@ const GraphContainer = ({
 
     cyRef.current = cy;
 
+    // Expose instance to parent
+    if (onCyInit) onCyInit(cy);
+
     // Handle clicks
     cy.on('tap', 'node, edge', (evt) => {
       const target = evt.target;
@@ -76,14 +81,14 @@ const GraphContainer = ({
 
       const target = evt.target;
       if (target.isNode() || target.isEdge()) {
-        // Get screen coordinates for the click position
+        // Get screen coordinates: rendered position is relative to the container
         const renderedPos = target.renderedPosition();
         const containerRect = containerRef.current.getBoundingClientRect();
 
         onRightClick({
           element: target,
-          x: containerRect.left + renderedPos.x + (containerRect.width / cy.zoom() * cy.pan().x),
-          y: containerRect.top + renderedPos.y + (containerRect.height / cy.zoom() * cy.pan().y)
+          x: containerRect.left + renderedPos.x,
+          y: containerRect.top + renderedPos.y
         });
       }
     });
@@ -95,20 +100,43 @@ const GraphContainer = ({
       onDoubleClick(target);
     });
 
-    // Handle tap to deselect on background
+    // Handle tap on background to deselect/exit focus
     cy.on('tap', (evt) => {
-      if (evt.target === cy) {
-        // Clicked on background - don't deselect, just handle in parent
+      if (evt.target === cy && onBackgroundClick) {
+        onBackgroundClick();
       }
     });
 
+    // Hover labels — add/remove .hover class on mouseover/mouseout
+    cy.on('mouseover', 'node', (evt) => {
+      evt.target.addClass('hover');
+    });
+    cy.on('mouseout', 'node', (evt) => {
+      evt.target.removeClass('hover');
+    });
+
+    // Zoom-adaptive labels — toggle .show-label based on zoom level
+    const ZOOM_LABEL_THRESHOLD = 1.8;
+    const updateZoomLabels = () => {
+      const zoom = cy.zoom();
+      if (zoom >= ZOOM_LABEL_THRESHOLD) {
+        cy.nodes().addClass('show-label');
+      } else {
+        cy.nodes().removeClass('show-label');
+      }
+    };
+    cy.on('zoom', updateZoomLabels);
+    // Run once on init in case we start zoomed in
+    updateZoomLabels();
+
     return () => {
+      if (onCyInit) onCyInit(null);
       if (cyRef.current) {
         cy.destroy();
         cyRef.current = null;
       }
     };
-  }, [onElementClick, onRightClick, onDoubleClick]);
+  }, [onElementClick, onRightClick, onDoubleClick, onCyInit, onBackgroundClick]);
 
   // Update graph elements
   useEffect(() => {
@@ -174,6 +202,12 @@ const GraphContainer = ({
         edge.removeClass('dimmed');
       }
     });
+
+    // Re-apply zoom-adaptive labels for newly added nodes
+    const ZOOM_LABEL_THRESHOLD = 1.8;
+    if (cy.zoom() >= ZOOM_LABEL_THRESHOLD) {
+      cy.nodes().addClass('show-label');
+    }
 
     // Apply layout
     applyLayout(cy, layout);

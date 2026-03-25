@@ -10,6 +10,12 @@ const ContextMenu = ({ x, y, visible, onSelect, onClose }) => {
       onClose();
     };
 
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
     document.addEventListener('mousedown', handleOutsideClick);
     document.addEventListener('keydown', handleEscape);
 
@@ -18,12 +24,6 @@ const ContextMenu = ({ x, y, visible, onSelect, onClose }) => {
       document.removeEventListener('keydown', handleEscape);
     };
   }, [visible, onClose]);
-
-  const handleEscape = (e) => {
-    if (e.key === 'Escape') {
-      onClose();
-    }
-  };
 
   if (!visible) return null;
 
