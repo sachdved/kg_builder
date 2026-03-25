@@ -131,9 +131,10 @@ const GraphContainer = ({
     }
 
     // Prepare node data with filter status
+    // In focus mode, show all nodes without dimming (skip type filtering)
     const filteredNodeIds = new Set(
       displayNodes
-        .filter(n => filteredTypes.has(n.data.type))
+        .filter(n => focusMode ? true : filteredTypes.has(n.data.type))
         .map(n => n.data.id)
     );
 
