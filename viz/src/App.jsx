@@ -946,6 +946,11 @@ const App = () => {
           filteredTypes={selectedEntityTypes}
           searchTerm={searchQuery}
           onElementClick={handleElementClick}
+          onDoubleClick={(element) => {
+            if (element.isNode()) {
+              handleEnterFocusMode(element.id());
+            }
+          }}
           onRightClick={handleRightClick}
           layout={currentLayout}
           isLoading={isLoading}
@@ -962,6 +967,7 @@ const App = () => {
             kgData={kgData}
             onClose={() => setSelectedElement(null)}
             onUpdateEntity={handleUpdateEntity}
+            onEnterFocusMode={handleEnterFocusMode}
           />
         )}
 
@@ -1033,7 +1039,7 @@ const SidebarWrapper = ({ children }) => {
 };
 
 // Separate component for details to enable conditional rendering
-const DetailsSidebar = ({ selectedElement, kgData, onClose, onUpdateEntity }) => {
+const DetailsSidebar = ({ selectedElement, kgData, onClose, onUpdateEntity, onEnterFocusMode }) => {
   return (
     <aside className="sidebar">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 16px' }}>
@@ -1053,6 +1059,7 @@ const DetailsSidebar = ({ selectedElement, kgData, onClose, onUpdateEntity }) =>
           kgData={kgData}
           onClose={() => onClose()}
           onUpdateEntity={onUpdateEntity}
+          onEnterFocusMode={onEnterFocusMode}
         />
       ) : (
         <EdgeDetails edgeData={selectedElement.data()} kgData={kgData} />

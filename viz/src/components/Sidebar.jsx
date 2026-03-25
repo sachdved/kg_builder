@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { entityColors, nodeShapes } from '../utils/styler';
 import EntityForm from './EntityForm';
 
-const Sidebar = ({ selectedElement, kgData, onClose, onEditEntity, onUpdateEntity }) => {
+const Sidebar = ({ selectedElement, kgData, onClose, onEditEntity, onUpdateEntity, onEnterFocusMode }) => {
   const [isEditing, setIsEditing] = useState(false);
 
   if (!selectedElement || !kgData?.entities) {
@@ -10,6 +10,7 @@ const Sidebar = ({ selectedElement, kgData, onClose, onEditEntity, onUpdateEntit
       <aside className="sidebar">
         <div className="sidebar-empty">
           <p>Click on a node to view details</p>
+          <p className="mt-sm">Double-click a node to focus on it and its neighbors</p>
           <p className="mt-sm">Right-click to access context menu</p>
         </div>
       </aside>
@@ -30,6 +31,7 @@ const Sidebar = ({ selectedElement, kgData, onClose, onEditEntity, onUpdateEntit
         setIsEditing={setIsEditing}
         onUpdateEntity={onUpdateEntity}
         onClose={() => onClose?.()}
+        onEnterFocusMode={onEnterFocusMode}
       />
     );
   }
@@ -42,7 +44,7 @@ const Sidebar = ({ selectedElement, kgData, onClose, onEditEntity, onUpdateEntit
   return <div className="sidebar"><div className="sidebar-empty">Unknown element</div></div>;
 };
 
-const EntityDetailsSidebar = ({ entity, kgData, isEditing, setIsEditing, onUpdateEntity, onClose }) => {
+const EntityDetailsSidebar = ({ entity, kgData, isEditing, setIsEditing, onUpdateEntity, onClose, onEnterFocusMode }) => {
   const connections = getConnections(entity.id, kgData);
 
   if (isEditing) {
@@ -70,9 +72,18 @@ const EntityDetailsSidebar = ({ entity, kgData, isEditing, setIsEditing, onUpdat
     <aside className="sidebar">
       <div className="sidebar-header">
         <h2>Entity Details</h2>
-        <button className="btn btn-primary" onClick={() => setIsEditing(true)}>
-          Edit
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            className="btn btn-primary"
+            onClick={() => onEnterFocusMode?.(entity.id)}
+            title="Show only this entity and its neighbors"
+          >
+            🔍 Focus
+          </button>
+          <button className="btn btn-secondary" onClick={() => setIsEditing(true)}>
+            Edit
+          </button>
+        </div>
       </div>
 
       <div className="sidebar-content">

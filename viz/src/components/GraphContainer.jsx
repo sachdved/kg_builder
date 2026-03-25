@@ -22,6 +22,7 @@ const GraphContainer = ({
   layout = 'forceDirected',
   isLoading = false,
   onRightClick,
+  onDoubleClick,
   focusMode = false,
   focusedNodeId = null,
   focusDepth = 1,
@@ -87,9 +88,11 @@ const GraphContainer = ({
       }
     });
 
-    // Handle double-click for focus
-    cy.on('cxttap', 'node', (evt) => {
-      // Right-click is handled above, so this won't trigger for nodes
+    // Handle double-click to enter focus mode
+    cy.on('tap2', 'node', (evt) => {
+      if (!onDoubleClick) return;
+      const target = evt.target;
+      onDoubleClick(target);
     });
 
     // Handle tap to deselect on background
@@ -105,7 +108,7 @@ const GraphContainer = ({
         cyRef.current = null;
       }
     };
-  }, [onElementClick, onRightClick]);
+  }, [onElementClick, onRightClick, onDoubleClick]);
 
   // Update graph elements
   useEffect(() => {
