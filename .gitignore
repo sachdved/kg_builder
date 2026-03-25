@@ -1,0 +1,5 @@
+./kg_builder.egg-info
+./kg_builder/__pycache__/
+viz/.ipynb_checkpoints/
+viz/node_modules/
+outputs/
