@@ -132,6 +132,14 @@ export function getNodeNeighborsByDirection(allNodes, allEdges, nodeId) {
  * @returns {{nodes: Array, edges: Array}} Filtered nodes and edges
  */
 export function getFocusedElements(allNodes, allEdges, focusedNodeId, focusDepth = 1, direction = 'both') {
+  console.log('[getFocusedElements] DEBUG:', {
+    allNodesCount: allNodes.length,
+    allEdgesCount: allEdges.length,
+    focusedNodeId,
+    focusDepth,
+    direction
+  });
+
   // Create adjacency list for BFS traversal with direction support
   const outgoingAdjacency = new Map(); // nodeId -> [targetId, ...]
   const incomingAdjacency = new Map(); // nodeId -> [sourceId, ...]
@@ -145,6 +153,8 @@ export function getFocusedElements(allNodes, allEdges, focusedNodeId, focusDepth
       incomingAdjacency.set(node.data.id, []);
     }
   });
+
+  console.log('[getFocusedElements] Adjacency initialized:', outgoingAdjacency.size, 'nodes');
 
   // Build directed adjacency lists
   allEdges.forEach(edge => {
@@ -201,6 +211,12 @@ export function getFocusedElements(allNodes, allEdges, focusedNodeId, focusDepth
   const filteredEdges = allEdges.filter(edge =>
     nodeIdSet.has(edge.data.source) && nodeIdSet.has(edge.data.target)
   );
+
+  console.log('[getFocusedElements] Result:', {
+    visibleNodes: filteredNodes.length,
+    visibleEdges: filteredEdges.length,
+    visitedIds: Array.from(visited)
+  });
 
   return {
     nodes: filteredNodes,
