@@ -137,7 +137,7 @@ const App = () => {
 
         // Only include edges where both endpoints are in the limited set
         const limitedEdges = parsedEdges.filter(
-          e => nodeIds.has(e.data.source) && nodeIds.has(e.data.target)
+          e => nodeIds.has(e.data.source) && nodeIds.has(e.data.target) && selectedRelationshipTypes.has(e.data.rel)
         );
 
         setTotalNodesCount(parsedNodes.length); // Track total before limiting
@@ -318,7 +318,7 @@ const App = () => {
     const limitedNodes = parsedNodes.filter(n => selectedEntityTypes.has(n.data.type));
     const nodeIds = new Set(limitedNodes.map(n => n.data.id));
     const limitedEdges = parsedEdges.filter(
-      e => nodeIds.has(e.data.source) && nodeIds.has(e.data.target)
+      e => nodeIds.has(e.data.source) && nodeIds.has(e.data.target) && selectedRelationshipTypes.has(e.data.rel)
     );
 
     setTotalNodesCount(parsedNodes.length);
@@ -328,7 +328,7 @@ const App = () => {
     setSelectedElement(null);
     setHighlightedNodes([]);
     setShowDiffColors(true);
-  }, [selectedEntityTypes]);
+  }, [selectedEntityTypes, selectedRelationshipTypes]);
 
   // Export change spec as JSON download
   const handleExportChangeSpec = useCallback(() => {
@@ -367,7 +367,7 @@ const App = () => {
     const limitedNodes = parsedNodes.filter(n => selectedEntityTypes.has(n.data.type));
     const nodeIds = new Set(limitedNodes.map(n => n.data.id));
     const limitedEdges = parsedEdges.filter(
-      e => nodeIds.has(e.data.source) && nodeIds.has(e.data.target)
+      e => nodeIds.has(e.data.source) && nodeIds.has(e.data.target) && selectedRelationshipTypes.has(e.data.rel)
     );
 
     setTotalNodesCount(parsedNodes.length);
@@ -376,7 +376,7 @@ const App = () => {
     setStats(getKGStats(restored));
     setSelectedElement(null);
     setHighlightedNodes([]);
-  }, [baseKgData, selectedEntityTypes]);
+  }, [baseKgData, selectedEntityTypes, selectedRelationshipTypes]);
 
   // Handle element click — enter focus mode for nodes
   const handleElementClick = useCallback((element) => {
@@ -475,7 +475,7 @@ const App = () => {
     const limitedNodes = parsedNodes.filter(n => selectedEntityTypes.has(n.data.type));
     const nodeIds = new Set(limitedNodes.map(n => n.data.id));
     const limitedEdges = parsedEdges.filter(
-      e => nodeIds.has(e.data.source) && nodeIds.has(e.data.target)
+      e => nodeIds.has(e.data.source) && nodeIds.has(e.data.target) && selectedRelationshipTypes.has(e.data.rel)
     );
 
     setNodes(limitedNodes);
@@ -485,7 +485,7 @@ const App = () => {
     // Deselect
     setSelectedElement(null);
     setHighlightedNodes([]);
-  }, [kgData, selectedEntityTypes]);
+  }, [kgData, selectedEntityTypes, selectedRelationshipTypes]);
 
   // Handle search results
   const handleSearchResults = useCallback((query) => {
@@ -590,7 +590,8 @@ const App = () => {
       'FILE', 'MODULE', 'CLASS', 'FUNCTION', 'CONSTANT', 'VARIABLE', 'IMPORT', 'DECORATOR'
     ]));
     setSelectedRelationshipTypes(new Set([
-      'CONTAINS', 'CALLS', 'INHERITS', 'IMPORTS', 'INSTANTIATES', 'DEFINES_IN'
+      'CONTAINS', 'CALLS', 'INHERITS', 'IMPORTS', 'INSTANTIATES', 'DEFINES_IN',
+      'CALLS_RESOLVED', 'IMPORTS_RESOLVED_TO', 'USES'
     ]));
 
     // Also exit focus mode to restore the full graph
@@ -723,7 +724,7 @@ const App = () => {
     const limitedNodes = parsedNodes.filter(n => selectedEntityTypes.has(n.data.type));
     const nodeIds = new Set(limitedNodes.map(n => n.data.id));
     const limitedEdges = parsedEdges.filter(
-      e => nodeIds.has(e.data.source) && nodeIds.has(e.data.target)
+      e => nodeIds.has(e.data.source) && nodeIds.has(e.data.target) && selectedRelationshipTypes.has(e.data.rel)
     );
 
     setNodes(limitedNodes);
@@ -754,7 +755,7 @@ const App = () => {
     }
 
     setShowNewNodeModal(false);
-  }, [kgData, selectedEntityTypes]);
+  }, [kgData, selectedEntityTypes, selectedRelationshipTypes]);
 
   // Handle adding new relationship
   const handleAddRelationship = useCallback((relData) => {
@@ -794,7 +795,7 @@ const App = () => {
     const limitedNodes = parsedNodes.filter(n => selectedEntityTypes.has(n.data.type));
     const nodeIds = new Set(limitedNodes.map(n => n.data.id));
     const limitedEdges = parsedEdges.filter(
-      e => nodeIds.has(e.data.source) && nodeIds.has(e.data.target)
+      e => nodeIds.has(e.data.source) && nodeIds.has(e.data.target) && selectedRelationshipTypes.has(e.data.rel)
     );
 
     setNodes(limitedNodes);
@@ -802,7 +803,7 @@ const App = () => {
     setStats(getKGStats(newKgData));
 
     setShowNewEdgeModal(false);
-  }, [kgData, selectedEntityTypes]);
+  }, [kgData, selectedEntityTypes, selectedRelationshipTypes]);
 
   // Handle updating entity
   const handleUpdateEntity = useCallback((updatedEntity) => {
@@ -854,7 +855,7 @@ const App = () => {
     const limitedNodes = parsedNodes.filter(n => selectedEntityTypes.has(n.data.type));
     const nodeIds = new Set(limitedNodes.map(n => n.data.id));
     const limitedEdges = parsedEdges.filter(
-      e => nodeIds.has(e.data.source) && nodeIds.has(e.data.target)
+      e => nodeIds.has(e.data.source) && nodeIds.has(e.data.target) && selectedRelationshipTypes.has(e.data.rel)
     );
 
     setNodes(limitedNodes);
@@ -871,7 +872,7 @@ const App = () => {
         setSelectedElement(null);
       }
     }
-  }, [kgData, selectedElement, selectedEntityTypes]);
+  }, [kgData, selectedElement, selectedEntityTypes, selectedRelationshipTypes]);
 
   // Handle save/export JSON
   const handleSaveJson = useCallback(() => {
@@ -916,7 +917,7 @@ const App = () => {
       const limitedNodes = parsedNodes.filter(n => selectedEntityTypes.has(n.data.type));
       const nodeIds = new Set(limitedNodes.map(n => n.data.id));
       const limitedEdges = parsedEdges.filter(
-        e => nodeIds.has(e.data.source) && nodeIds.has(e.data.target)
+        e => nodeIds.has(e.data.source) && nodeIds.has(e.data.target) && selectedRelationshipTypes.has(e.data.rel)
       );
 
       setNodes(limitedNodes);
@@ -932,7 +933,7 @@ const App = () => {
       setSelectedElement(null);
       setHighlightedNodes([]);
     }
-  }, [undoRedoState, selectedEntityTypes]);
+  }, [undoRedoState, selectedEntityTypes, selectedRelationshipTypes]);
 
   // Redo handler
   const handleRedo = useCallback(() => {
@@ -948,7 +949,7 @@ const App = () => {
       const limitedNodes = parsedNodes.filter(n => selectedEntityTypes.has(n.data.type));
       const nodeIds = new Set(limitedNodes.map(n => n.data.id));
       const limitedEdges = parsedEdges.filter(
-        e => nodeIds.has(e.data.source) && nodeIds.has(e.data.target)
+        e => nodeIds.has(e.data.source) && nodeIds.has(e.data.target) && selectedRelationshipTypes.has(e.data.rel)
       );
 
       setNodes(limitedNodes);
@@ -960,7 +961,7 @@ const App = () => {
       setEdges([]);
       setStats({ totalEntities: 0, totalRelationships: 0 });
     }
-  }, [undoRedoState, selectedEntityTypes]);
+  }, [undoRedoState, selectedEntityTypes, selectedRelationshipTypes]);
 
   // Keyboard shortcuts
   useEffect(() => {

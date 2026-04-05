@@ -10,7 +10,13 @@ const FilterPanel = ({
   onResetFilters
 }) => {
   const allEntityTypes = ['FILE', 'MODULE', 'CLASS', 'FUNCTION', 'CONSTANT', 'VARIABLE', 'IMPORT', 'DECORATOR'];
-  const allRelationshipTypes = ['CONTAINS', 'CALLS', 'INHERITS', 'IMPORTS', 'INSTANTIATES', 'DEFINES_IN'];
+
+  // Build relationship type list dynamically from actual data
+  const defaultRelTypes = ['CONTAINS', 'CALLS', 'INHERITS', 'IMPORTS', 'INSTANTIATES', 'DEFINES_IN',
+    'CALLS_RESOLVED', 'IMPORTS_RESOLVED_TO', 'USES'];
+  const dataRelTypes = Object.keys(kgStats?.relationshipTypes || {});
+  const allRelationshipTypes = [...new Set([...defaultRelTypes, ...dataRelTypes])]
+    .filter(t => (kgStats?.relationshipTypes?.[t] || 0) > 0 || defaultRelTypes.includes(t));
 
   return (
     <div className="filter-panel">
