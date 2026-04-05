@@ -31,9 +31,13 @@ dev = [
 progress = [
     "tqdm>=4.65",
 ]
+mcp = [
+    "mcp>=1.0",
+]
 
 [project.scripts]
 kg_builder = "kg_builder.cli:main"
+kg_builder_mcp = "kg_builder.mcp_server:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

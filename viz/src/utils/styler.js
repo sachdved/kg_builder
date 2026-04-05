@@ -196,6 +196,56 @@ export const generateStylesheet = () => [
       'line-opacity': 0.15,
       'target-arrow-opacity': 0.15
     }
+  },
+  // Diff mode: added nodes (green glow)
+  {
+    selector: 'node[diff_status = "added"]',
+    style: {
+      'border-width': 4,
+      'border-color': '#28a745',
+      'border-opacity': 1,
+    }
+  },
+  // Diff mode: modified nodes (yellow glow)
+  {
+    selector: 'node[diff_status = "modified"]',
+    style: {
+      'border-width': 4,
+      'border-color': '#ffc107',
+      'border-opacity': 1,
+    }
+  },
+  // Diff mode: removed nodes (red dashed ghost)
+  {
+    selector: 'node[diff_status = "removed"]',
+    style: {
+      'border-width': 3,
+      'border-color': '#dc3545',
+      'border-style': 'dashed',
+      'border-opacity': 1,
+      'background-opacity': 0.3,
+      'text-opacity': 0.5,
+    }
+  },
+  // Diff mode: added edges (green)
+  {
+    selector: 'edge[diff_status = "added"]',
+    style: {
+      'line-color': '#28a745',
+      'target-arrow-color': '#28a745',
+      'width': 3,
+    }
+  },
+  // Diff mode: removed edges (red dashed)
+  {
+    selector: 'edge[diff_status = "removed"]',
+    style: {
+      'line-color': '#dc3545',
+      'target-arrow-color': '#dc3545',
+      'line-style': 'dashed',
+      'line-opacity': 0.5,
+      'width': 2,
+    }
   }
 ];
 

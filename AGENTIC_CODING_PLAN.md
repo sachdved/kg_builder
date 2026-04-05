@@ -28,7 +28,7 @@ This document evaluates the proposal to use the `kg_builder` knowledge graph for
 |------------|--------|---------|
 | **No cross-file import resolution** | Cannot traverse from `import X` to X's actual definition in another file. | `from utils import helper` creates no edge to `utils.py::helper()`. |
 | **Unresolved external references** | Calls to libraries/stdlib appear as dead-end edges with no target entity. | `json.loads()` has no entity for the `loads` function. |
-| **No dynamic behavior modeling** | AST is static; cannot capture runtime polymorphism, monkey-patching, or reflection. | `getattr(obj, method_name)()` produces no edge. |
+| **No dynamic behavior modeling** | AST is s tatic; cannot capture runtime polymorphism, monkey-patching, or reflection. | `getattr(obj, method_name)()` produces no edge. |
 | **Shallow semantic understanding** | Only captures syntactic relationships, not semantic intent or conceptual similarity. | Two functions doing "validation" won't be connected unless they call each other. |
 | **No usage frequency/context weighting** | All edges are equal; cannot prioritize hot paths or critical code. | Cannot distinguish core business logic from rarely-used edge cases. |
 

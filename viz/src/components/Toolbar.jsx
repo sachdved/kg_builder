@@ -16,7 +16,10 @@ const Toolbar = ({
   onUndo,
   onRedo,
   onAddEntityClick,
-  onAddRelationshipClick
+  onAddRelationshipClick,
+  onDiffClick,
+  diffActive,
+  diffSummaryComponent,
 }) => {
   return (
     <div className="toolbar">
@@ -38,7 +41,23 @@ const Toolbar = ({
           </svg>
           Save
         </button>
+        <button
+          className={`btn ${diffActive ? 'btn-active' : 'btn-primary'}`}
+          onClick={onDiffClick}
+          title="Compare changes (Diff Mode)"
+          style={diffActive ? { backgroundColor: '#28a745', color: '#fff' } : {}}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 3v18M3 12h18" />
+            <path d="M6 6l-3 3 3 3" />
+            <path d="M18 6l3 3-3 3" />
+          </svg>
+          Diff
+        </button>
       </div>
+
+      {/* Diff summary badges */}
+      {diffSummaryComponent}
 
       {/* Add Operations */}
       <div className="toolbar-group">

@@ -3,6 +3,7 @@ pyproject.toml
 kg_builder/__init__.py
 kg_builder/agent_helper.py
 kg_builder/cli.py
+kg_builder/kg_diff.py
 kg_builder/models.py
 kg_builder/parser.py
 kg_builder/query_engine.py
@@ -28,4 +29,5 @@ kg_builder/tools/get_callers.py
 kg_builder/tools/get_neighbors.py
 kg_builder/tools/resolve_import.py
 kg_builder/tools/traverse.py
+tests/test_kg_diff.py
 tests/test_parser.py

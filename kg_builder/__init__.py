@@ -19,6 +19,8 @@ from kg_builder.models import Entity, EntityType, KnowledgeGraph, Relationship, 
 from kg_builder.parser import parse_file
 from kg_builder.query_engine import KGQueryEngine
 from kg_builder.symbol_resolver import SymbolResolver
+from kg_builder.kg_diff import ChangeSpec, diff_knowledge_graphs
+from kg_builder.agent_planner import EditPlan, generate_edit_plan
 
 
 def build_knowledge_graph(
@@ -101,6 +103,11 @@ __all__ = [
     "build_knowledge_graph",
     "KGQueryEngine",
     "SymbolResolver",
+    # Diff and planning
+    "ChangeSpec",
+    "diff_knowledge_graphs",
+    "EditPlan",
+    "generate_edit_plan",
     # Agent helpers (use before modifying code)
     "understand_function",
     "analyze_impact",

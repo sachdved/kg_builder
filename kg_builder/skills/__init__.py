@@ -213,6 +213,7 @@ def invoke_skill(
 from kg_builder.skills.explore import ExploreSkill  # noqa: E402
 from kg_builder.skills.impact import ImpactSkill  # noqa: E402
 from kg_builder.skills.context import ContextSkill  # noqa: E402
+from kg_builder.skills.plan import PlanSkill  # noqa: E402
 
 
 __all__ = [

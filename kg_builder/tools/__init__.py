@@ -56,6 +56,7 @@ from kg_builder.tools.extract_context import kg_extract_context  # noqa: E402
 from kg_builder.tools.get_callers import kg_get_callers  # noqa: E402
 from kg_builder.tools.traverse import kg_traverse  # noqa: E402
 from kg_builder.tools.resolve_import import kg_resolve_import  # noqa: E402
+from kg_builder.tools.generate_plan import kg_generate_plan  # noqa: E402
 
 
 __all__ = [
@@ -68,4 +69,5 @@ __all__ = [
     "kg_get_callers",
     "kg_traverse",
     "kg_resolve_import",
+    "kg_generate_plan",
 ]

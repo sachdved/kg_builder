@@ -10,6 +10,8 @@ import ContextMenu from './components/ContextMenu';
 import ConfirmationDialog from './components/ConfirmationDialog';
 import NewNodeModal from './components/NewNodeModal';
 import NewEdgeModal from './components/NewEdgeModal';
+import DiffPanel from './components/DiffPanel';
+import DiffSummary from './components/DiffSummary';
 
 // Utils
 import { parseKGToElements, getKGStats } from './utils/kgParser';
@@ -25,6 +27,7 @@ import {
   canRedo,
   cloneKGData
 } from './utils/undoRedo';
+import { diffKnowledgeGraphs, classifyElements, hasDiffChanges } from './utils/kgDiff';
 
 const App = () => {
   // Data state
@@ -72,6 +75,11 @@ const App = () => {
   const [showNewNodeModal, setShowNewNodeModal] = useState(false);
   const [showNewEdgeModal, setShowNewEdgeModal] = useState(false);
 
+  // Diff mode state
+  const [baseKgData, setBaseKgData] = useState(null);
+  const [showDiffPanel, setShowDiffPanel] = useState(false);
+  const [showDiffColors, setShowDiffColors] = useState(true);
+
   // Focus mode state
   const [focusMode, setFocusMode] = useState(false);
   const [focusedNodeId, setFocusedNodeId] = useState(null);
@@ -108,6 +116,9 @@ const App = () => {
       try {
         const json = JSON.parse(e.target.result);
         setKgData(json);
+
+        // Snapshot as base KG for diff mode
+        setBaseKgData(cloneKGData(json));
 
         // Initialize undo/redo state with this data
         setUndoRedoState({
@@ -156,6 +167,169 @@ const App = () => {
     // Reset the input so the same file can be selected again
     event.target.value = '';
   }, []);
+
+  // Diff computation (recomputed whenever kgData or baseKgData change)
+  const diffResult = useMemo(() => {
+    if (!baseKgData || !kgData) return null;
+    return diffKnowledgeGraphs(baseKgData, kgData);
+  }, [baseKgData, kgData]);
+
+  const diffClassification = useMemo(() => {
+    if (!diffResult || !hasDiffChanges(diffResult)) return null;
+    return classifyElements(diffResult);
+  }, [diffResult]);
+
+  // Apply diff_status data to nodes and edges for Cytoscape styling
+  const diffAwareNodes = useMemo(() => {
+    if (!showDiffColors || !diffClassification) return nodes;
+
+    const { addedIds, removedIds, modifiedIds } = diffClassification;
+
+    // Existing nodes get diff_status
+    const annotated = nodes.map(n => {
+      const id = n.data.id;
+      let diffStatus = null;
+      if (addedIds.has(id)) diffStatus = 'added';
+      else if (modifiedIds.has(id)) diffStatus = 'modified';
+
+      if (diffStatus) {
+        return { ...n, data: { ...n.data, diff_status: diffStatus } };
+      }
+      return n;
+    });
+
+    // Add ghost nodes for removed entities
+    if (baseKgData) {
+      for (const eid of removedIds) {
+        const entity = baseKgData.entities[eid];
+        if (entity) {
+          annotated.push({
+            data: {
+              id: eid,
+              name: entity.name,
+              type: entity.type,
+              filePath: entity.file_path,
+              lineNumber: entity.line_number,
+              diff_status: 'removed',
+            }
+          });
+        }
+      }
+    }
+
+    return annotated;
+  }, [nodes, showDiffColors, diffClassification, baseKgData]);
+
+  const diffAwareEdges = useMemo(() => {
+    if (!showDiffColors || !diffClassification) return edges;
+
+    const { addedEdgeKeys, removedEdgeKeys } = diffClassification;
+
+    const annotated = edges.map(e => {
+      const key = e.data.id;
+      let diffStatus = null;
+      if (addedEdgeKeys.has(key)) diffStatus = 'added';
+
+      if (diffStatus) {
+        return { ...e, data: { ...e.data, diff_status: diffStatus } };
+      }
+      return e;
+    });
+
+    // Add ghost edges for removed relationships
+    if (baseKgData) {
+      for (const key of removedEdgeKeys) {
+        const [source, target, type] = key.split('::');
+        annotated.push({
+          data: {
+            id: key,
+            source,
+            target,
+            rel: type,
+            diff_status: 'removed',
+          }
+        });
+      }
+    }
+
+    return annotated;
+  }, [edges, showDiffColors, diffClassification, baseKgData]);
+
+  // Load an agent proposal as the new kgData (base stays the same)
+  const handleLoadProposal = useCallback((proposalKg) => {
+    setKgData(proposalKg);
+
+    // Initialize undo/redo from proposal
+    setUndoRedoState({
+      history: [],
+      future: [],
+      current: cloneKGData(proposalKg)
+    });
+
+    // Re-parse
+    const { nodes: parsedNodes, edges: parsedEdges } = parseKGToElements(proposalKg);
+    const limitedNodes = parsedNodes.filter(n => selectedEntityTypes.has(n.data.type));
+    const nodeIds = new Set(limitedNodes.map(n => n.data.id));
+    const limitedEdges = parsedEdges.filter(
+      e => nodeIds.has(e.data.source) && nodeIds.has(e.data.target)
+    );
+
+    setTotalNodesCount(parsedNodes.length);
+    setNodes(limitedNodes);
+    setEdges(limitedEdges);
+    setStats(getKGStats(proposalKg));
+    setSelectedElement(null);
+    setHighlightedNodes([]);
+    setShowDiffColors(true);
+  }, [selectedEntityTypes]);
+
+  // Export change spec as JSON download
+  const handleExportChangeSpec = useCallback(() => {
+    if (!diffResult || !hasDiffChanges(diffResult)) {
+      alert('No changes to export.');
+      return;
+    }
+
+    const jsonString = JSON.stringify(diffResult, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const now = new Date();
+    const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    a.href = url;
+    a.download = `change_spec_${timestamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [diffResult]);
+
+  // Reset current KG back to base
+  const handleResetToBase = useCallback(() => {
+    if (!baseKgData) return;
+
+    const restored = cloneKGData(baseKgData);
+    setKgData(restored);
+    setUndoRedoState({
+      history: [],
+      future: [],
+      current: cloneKGData(restored)
+    });
+
+    const { nodes: parsedNodes, edges: parsedEdges } = parseKGToElements(restored);
+    const limitedNodes = parsedNodes.filter(n => selectedEntityTypes.has(n.data.type));
+    const nodeIds = new Set(limitedNodes.map(n => n.data.id));
+    const limitedEdges = parsedEdges.filter(
+      e => nodeIds.has(e.data.source) && nodeIds.has(e.data.target)
+    );
+
+    setTotalNodesCount(parsedNodes.length);
+    setNodes(limitedNodes);
+    setEdges(limitedEdges);
+    setStats(getKGStats(restored));
+    setSelectedElement(null);
+    setHighlightedNodes([]);
+  }, [baseKgData, selectedEntityTypes]);
 
   // Handle element click — enter focus mode for nodes
   const handleElementClick = useCallback((element) => {
@@ -884,6 +1058,14 @@ const App = () => {
         onRedo={handleRedo}
         onAddEntityClick={() => setShowNewNodeModal(true)}
         onAddRelationshipClick={() => setShowNewEdgeModal(true)}
+        onDiffClick={() => setShowDiffPanel(prev => !prev)}
+        diffActive={showDiffPanel}
+        diffSummaryComponent={
+          <DiffSummary
+            diffResult={diffResult}
+            visible={showDiffColors && hasDiffChanges(diffResult)}
+          />
+        }
       />
 
       <input
@@ -910,8 +1092,8 @@ const App = () => {
 
         {/* Graph Visualization */}
         <GraphContainer
-          nodes={nodes}
-          edges={edges}
+          nodes={diffAwareNodes}
+          edges={diffAwareEdges}
           selectedElement={selectedElement}
           highlightedNodes={highlightedNodes}
           filteredTypes={selectedEntityTypes}
@@ -945,6 +1127,19 @@ const App = () => {
 
         {/* Legend */}
         <Legend visible={true} />
+
+        {/* Diff Panel */}
+        <DiffPanel
+          isOpen={showDiffPanel}
+          onClose={() => setShowDiffPanel(false)}
+          diffResult={diffResult}
+          showDiffColors={showDiffColors}
+          onToggleDiffColors={() => setShowDiffColors(prev => !prev)}
+          onLoadProposal={handleLoadProposal}
+          onExportChangeSpec={handleExportChangeSpec}
+          onResetToBase={handleResetToBase}
+          hasBaseKg={!!baseKgData}
+        />
 
         {/* Context Menu */}
         <ContextMenu
