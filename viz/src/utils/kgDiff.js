@@ -4,6 +4,8 @@
  * Compares two KG JSON structures (base vs current/proposed) and produces
  * a structured diff. Used by the viz for coloring nodes/edges and exporting
  * change specs.
+ *
+ * Optimized for large graphs (1000+ entities, 5000+ relationships).
  */
 
 /**
@@ -19,10 +21,14 @@ export function diffKnowledgeGraphs(baseKG, proposedKG) {
   const proposedRels = proposedKG?.relationships || [];
 
   const entityChanges = [];
-  const relationshipChanges = [];
 
   const baseIds = new Set(Object.keys(baseEntities));
   const proposedIds = new Set(Object.keys(proposedEntities));
+
+  // Pre-build neighbor index for changed entities (avoids O(changes * rels) scan)
+  // We'll populate lazily only for entities that actually changed.
+  const proposedNeighborIndex = buildNeighborIndex(proposedRels);
+  const baseNeighborIndex = buildNeighborIndex(baseRels);
 
   // Added entities
   for (const eid of proposedIds) {
@@ -36,7 +42,7 @@ export function diffKnowledgeGraphs(baseKG, proposedKG) {
         before: null,
         after: entity,
         field_diffs: {},
-        neighbor_ids: collectNeighborIds(eid, proposedRels),
+        neighbor_ids: proposedNeighborIndex.get(eid) || [],
       });
     }
   }
@@ -53,16 +59,16 @@ export function diffKnowledgeGraphs(baseKG, proposedKG) {
         before: entity,
         after: null,
         field_diffs: {},
-        neighbor_ids: collectNeighborIds(eid, baseRels),
+        neighbor_ids: baseNeighborIndex.get(eid) || [],
       });
     }
   }
 
-  // Modified entities
+  // Modified entities — only compare entities that exist in both
   for (const eid of baseIds) {
     if (proposedIds.has(eid)) {
       const fieldDiffs = diffEntityFields(baseEntities[eid], proposedEntities[eid]);
-      if (Object.keys(fieldDiffs).length > 0) {
+      if (fieldDiffs) {
         entityChanges.push({
           action: 'modified',
           entity_id: eid,
@@ -71,24 +77,34 @@ export function diffKnowledgeGraphs(baseKG, proposedKG) {
           before: baseEntities[eid],
           after: proposedEntities[eid],
           field_diffs: fieldDiffs,
-          neighbor_ids: collectNeighborIds(eid, proposedRels),
+          neighbor_ids: proposedNeighborIndex.get(eid) || [],
         });
       }
     }
   }
 
-  // Relationship diffing
-  const baseRelKeys = new Map();
+  // Relationship diffing using string key sets
+  const baseRelKeySet = new Set();
+  const baseRelByKey = new Map();
   for (const r of baseRels) {
-    baseRelKeys.set(relKey(r), r);
-  }
-  const proposedRelKeys = new Map();
-  for (const r of proposedRels) {
-    proposedRelKeys.set(relKey(r), r);
+    const key = relKey(r);
+    baseRelKeySet.add(key);
+    baseRelByKey.set(key, r);
   }
 
-  for (const [key, rel] of proposedRelKeys) {
-    if (!baseRelKeys.has(key)) {
+  const proposedRelKeySet = new Set();
+  const proposedRelByKey = new Map();
+  for (const r of proposedRels) {
+    const key = relKey(r);
+    proposedRelKeySet.add(key);
+    proposedRelByKey.set(key, r);
+  }
+
+  const relationshipChanges = [];
+
+  for (const key of proposedRelKeySet) {
+    if (!baseRelKeySet.has(key)) {
+      const rel = proposedRelByKey.get(key);
       relationshipChanges.push({
         action: 'added',
         source_id: rel.source_id,
@@ -99,8 +115,9 @@ export function diffKnowledgeGraphs(baseKG, proposedKG) {
     }
   }
 
-  for (const [key, rel] of baseRelKeys) {
-    if (!proposedRelKeys.has(key)) {
+  for (const key of baseRelKeySet) {
+    if (!proposedRelKeySet.has(key)) {
+      const rel = baseRelByKey.get(key);
       relationshipChanges.push({
         action: 'removed',
         source_id: rel.source_id,
@@ -122,8 +139,8 @@ export function diffKnowledgeGraphs(baseKG, proposedKG) {
   return {
     version: '1.0',
     timestamp: new Date().toISOString(),
-    source_kg_hash: computeSimpleHash(baseKG),
-    proposed_kg_hash: computeSimpleHash(proposedKG),
+    source_kg_hash: '',  // Skip expensive hash for viz use
+    proposed_kg_hash: '',
     summary,
     entity_changes: entityChanges,
     relationship_changes: relationshipChanges,
@@ -176,36 +193,73 @@ function relKey(rel) {
   return `${rel.source_id}::${rel.target_id}::${rel.type}`;
 }
 
+/**
+ * Build a Map from entity_id → sorted neighbor IDs, in a single pass over relationships.
+ */
+function buildNeighborIndex(relationships) {
+  const index = new Map();
+  for (const rel of relationships) {
+    if (!index.has(rel.source_id)) index.set(rel.source_id, new Set());
+    if (!index.has(rel.target_id)) index.set(rel.target_id, new Set());
+    index.get(rel.source_id).add(rel.target_id);
+    index.get(rel.target_id).add(rel.source_id);
+  }
+  // Convert Sets to sorted arrays
+  const result = new Map();
+  for (const [eid, neighbors] of index) {
+    result.set(eid, Array.from(neighbors).sort());
+  }
+  return result;
+}
+
+/**
+ * Compare two entity dicts field by field.
+ * Returns diffs object if any fields differ, or null if identical.
+ * Avoids JSON.stringify for primitive fields.
+ */
 function diffEntityFields(existing, proposed) {
-  const fields = ['name', 'type', 'file_path', 'line_number', 'end_line', 'properties'];
+  let hasDiff = false;
   const diffs = {};
-  for (const f of fields) {
+
+  // Fast path: compare primitives directly
+  const primitiveFields = ['name', 'type', 'file_path', 'line_number', 'end_line'];
+  for (const f of primitiveFields) {
     const oldVal = existing[f];
     const newVal = proposed[f];
-    if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
+    if (oldVal !== newVal) {
       diffs[f] = [oldVal, newVal];
+      hasDiff = true;
     }
   }
-  return diffs;
-}
 
-function collectNeighborIds(entityId, relationships) {
-  const neighbors = new Set();
-  for (const rel of relationships) {
-    if (rel.source_id === entityId) neighbors.add(rel.target_id);
-    else if (rel.target_id === entityId) neighbors.add(rel.source_id);
+  // Only JSON.stringify for properties (the one complex field)
+  const oldProps = existing.properties;
+  const newProps = proposed.properties;
+  if (oldProps !== newProps) {
+    // Quick check: both null/undefined
+    if (!oldProps && !newProps) {
+      // no diff
+    } else if (!oldProps || !newProps) {
+      diffs.properties = [oldProps, newProps];
+      hasDiff = true;
+    } else {
+      // Compare keys count first (fast rejection)
+      const oldKeys = Object.keys(oldProps);
+      const newKeys = Object.keys(newProps);
+      if (oldKeys.length !== newKeys.length) {
+        diffs.properties = [oldProps, newProps];
+        hasDiff = true;
+      } else {
+        // Only stringify if key counts match (rare case needs deep compare)
+        const oldStr = JSON.stringify(oldProps);
+        const newStr = JSON.stringify(newProps);
+        if (oldStr !== newStr) {
+          diffs.properties = [oldProps, newProps];
+          hasDiff = true;
+        }
+      }
+    }
   }
-  return Array.from(neighbors).sort();
-}
 
-function computeSimpleHash(obj) {
-  // Simple hash for browser use (not cryptographic)
-  const str = JSON.stringify(obj, Object.keys(obj).sort());
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash |= 0;
-  }
-  return `hash:${Math.abs(hash).toString(16)}`;
+  return hasDiff ? diffs : null;
 }

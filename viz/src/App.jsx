@@ -168,11 +168,42 @@ const App = () => {
     event.target.value = '';
   }, []);
 
-  // Diff computation (recomputed whenever kgData or baseKgData change)
-  const diffResult = useMemo(() => {
-    if (!baseKgData || !kgData) return null;
-    return diffKnowledgeGraphs(baseKgData, kgData);
-  }, [baseKgData, kgData]);
+  // Diff computation — only runs when diff panel is open or diff colors are on
+  // Uses a ref to avoid recomputing on every render when diff is inactive
+  const [diffResult, setDiffResult] = useState(null);
+  const diffPending = useRef(false);
+
+  useEffect(() => {
+    if (!baseKgData || !kgData || (!showDiffPanel && !showDiffColors)) {
+      // Don't compute diff if nobody is looking at it
+      if (diffResult && !showDiffPanel && !showDiffColors) {
+        // Keep existing result but don't recompute
+      }
+      return;
+    }
+
+    // Defer diff computation to avoid blocking the main thread
+    if (diffPending.current) return;
+    diffPending.current = true;
+
+    // Use requestIdleCallback (or setTimeout fallback) so the UI renders first
+    const compute = () => {
+      try {
+        const result = diffKnowledgeGraphs(baseKgData, kgData);
+        setDiffResult(result);
+      } catch (e) {
+        console.error('Diff computation failed:', e);
+        setDiffResult(null);
+      }
+      diffPending.current = false;
+    };
+
+    if (typeof requestIdleCallback === 'function') {
+      requestIdleCallback(compute, { timeout: 2000 });
+    } else {
+      setTimeout(compute, 50);
+    }
+  }, [baseKgData, kgData, showDiffPanel, showDiffColors]);
 
   const diffClassification = useMemo(() => {
     if (!diffResult || !hasDiffChanges(diffResult)) return null;
@@ -236,24 +267,40 @@ const App = () => {
       return e;
     });
 
-    // Add ghost edges for removed relationships
+    // Add ghost edges for removed relationships — but only if both
+    // endpoints exist in the current graph (otherwise Cytoscape crashes)
     if (baseKgData) {
+      const currentNodeIds = new Set(annotated.length > 0
+        ? diffAwareNodes.map(n => n.data.id)
+        : []
+      );
+
       for (const key of removedEdgeKeys) {
-        const [source, target, type] = key.split('::');
-        annotated.push({
-          data: {
-            id: key,
-            source,
-            target,
-            rel: type,
-            diff_status: 'removed',
-          }
-        });
+        const parts = key.split('::');
+        // Edge key is "source::target::type" but source/target can contain ::
+        // Use the relationship_change data instead
+        const rc = diffResult?.relationship_changes?.find(
+          r => r.action === 'removed' && `${r.source_id}::${r.target_id}::${r.relationship_type}` === key
+        );
+        if (!rc) continue;
+
+        // Only add ghost edge if both endpoints exist in the graph
+        if (currentNodeIds.has(rc.source_id) && currentNodeIds.has(rc.target_id)) {
+          annotated.push({
+            data: {
+              id: `ghost_${key}`,
+              source: rc.source_id,
+              target: rc.target_id,
+              rel: rc.relationship_type,
+              diff_status: 'removed',
+            }
+          });
+        }
       }
     }
 
     return annotated;
-  }, [edges, showDiffColors, diffClassification, baseKgData]);
+  }, [edges, showDiffColors, diffClassification, baseKgData, diffAwareNodes, diffResult]);
 
   // Load an agent proposal as the new kgData (base stays the same)
   const handleLoadProposal = useCallback((proposalKg) => {

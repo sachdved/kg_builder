@@ -1,8 +1,47 @@
-./kg_builder.egg-info
-./kg_builder/__pycache__/
-viz/.ipynb_checkpoints/
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+dist/
+build/
+*.so
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# kg_builder cache
+.kg_cache/
+kg_current.json
+kg_empty.json
+
+# Node / Viz
 viz/node_modules/
+viz/dist/
+viz/.vite/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test / Coverage
+.pytest_cache/
+htmlcov/
+.coverage
+*.cover
+
+# Outputs
 outputs/
 output/
-kg_builder/__pycache__/
-tests/__pycache__/
