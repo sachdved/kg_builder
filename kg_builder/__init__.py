@@ -78,15 +78,22 @@ def build_knowledge_graph(
             # Skip files that can't be processed
             continue
 
-    # Build indices for fast lookups
+    # Build indices for fast lookups (needed by SymbolResolver)
     kg._build_indices()
 
-    # Resolve imports across files
+    # Resolve imports, inheritance, and calls across files
     resolver = SymbolResolver(kg)
     resolver.build_symbol_table()
     resolved_rels = resolver.create_resolved_relationships()
     for rel in resolved_rels:
         kg.add_relationship(rel)
+
+    # Rebuild indices to include resolved relationships
+    kg._by_name.clear()
+    kg._by_file.clear()
+    kg._adjacency.clear()
+    kg._reverse_adjacency.clear()
+    kg._build_indices()
 
     return kg
 
