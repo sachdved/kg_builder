@@ -326,23 +326,41 @@ class SymbolResolver:
 
         return resolved_rels
 
-    def resolve_import(self, import_entity: Entity) -> Optional[str]:
-        """Resolve an IMPORT entity to its actual definition."""
+    def resolve_import(self, import_entity: Entity, _depth: int = 0) -> Optional[str]:
+        """Resolve an IMPORT entity to its actual definition.
+
+        Follows re-exports: if module/__init__.py imports the symbol from
+        a submodule, we follow that chain (up to 3 levels deep).
+        """
+        if _depth > 3:
+            return None  # Prevent infinite loops
+
         module = import_entity.properties.get("module", "")
         name = import_entity.name
+        original_name = import_entity.properties.get("original_name", name)
 
-        resolved_path = self._find_module_file(module)
+        # Try resolving the module, using the importing file's directory
+        # as context for relative imports
+        resolved_path = self._find_module_file(module, context_file=import_entity.file_path)
         if not resolved_path:
             return None
 
-        fq_name = f"{resolved_path}::{name}"
-        if fq_name in self._symbol_table:
-            return self._symbol_table[fq_name]
+        # Direct lookup: symbol defined in the target module
+        for lookup_name in (name, original_name):
+            fq_name = f"{resolved_path}::{lookup_name}"
+            if fq_name in self._symbol_table:
+                return self._symbol_table[fq_name]
 
-        original_name = import_entity.properties.get("original_name", name)
-        fq_name = f"{resolved_path}::{original_name}"
-        if fq_name in self._symbol_table:
-            return self._symbol_table[fq_name]
+        # Re-export check: the target module's __init__.py may import
+        # the symbol from a submodule (e.g., `from .rest import RESTClient`)
+        for entity in self.kg.entities.values():
+            if (entity.type == EntityType.IMPORT and
+                    entity.file_path == resolved_path and
+                    entity.name in (name, original_name)):
+                # Recursively resolve this re-export
+                result = self.resolve_import(entity, _depth + 1)
+                if result:
+                    return result
 
         return None
 
@@ -363,23 +381,48 @@ class SymbolResolver:
 
         return None
 
-    def _find_module_file(self, module_name: str) -> Optional[str]:
-        """Find the file path for a given module name."""
+    def _find_module_file(self, module_name: str, context_file: str = "") -> Optional[str]:
+        """Find the file path for a given module name.
+
+        For relative-looking module names (short names like 'rest' that could
+        be relative imports), first tries resolving relative to the context
+        file's directory before falling back to global search.
+        """
         if not module_name:
             return None
 
-        possible_paths = [
-            f"{module_name.replace('.', '/')}.py",
-            f"{module_name.replace('.', '/')}/__init__.py",
-        ]
+        rel_path = module_name.replace(".", "/")
+        candidates = [f"{rel_path}.py", f"{rel_path}/__init__.py"]
 
+        # Build set of all file paths for fast lookup
+        all_file_paths: dict[str, str] = {}
         for entity in self.kg.entities.values():
-            if entity.type == EntityType.FILE:
-                for path in possible_paths:
-                    if path in entity.file_path or entity.file_path.endswith(path):
-                        return entity.file_path
+            if entity.type in (EntityType.FILE, EntityType.MODULE):
+                all_file_paths[entity.file_path] = entity.file_path
 
-        return None
+        # Try relative to context file's directory first
+        if context_file:
+            import posixpath
+            context_dir = posixpath.dirname(context_file)
+            if context_dir:
+                for candidate in candidates:
+                    relative_path = posixpath.join(context_dir, candidate)
+                    # Normalize (handle ../)
+                    relative_path = posixpath.normpath(relative_path)
+                    if relative_path in all_file_paths:
+                        return relative_path
+
+        # Global search with path-boundary matching
+        best = None
+        for fp in all_file_paths:
+            for candidate in candidates:
+                if fp == candidate:
+                    return fp
+                if fp.endswith("/" + candidate):
+                    if best is None or len(fp) < len(best):
+                        best = fp
+
+        return best
 
     def create_resolved_relationships(self) -> list[Relationship]:
         """Create all resolved relationships: imports, inheritance, and calls.
