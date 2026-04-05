@@ -12,12 +12,17 @@ export const entityColors = {
 
 // Relationship type colors
 export const relationshipColors = {
-  CONTAINS: '#666666',   // Gray - structural
-  CALLS: '#C73E1D',      // Red-brown - active
-  INHERITS: '#F18F01',   // Orange - important
-  IMPORTS: '#2E86AB',    // Blue - external
-  INSTANTIATES: '#6A994E', // Green - creation
-  DEFINES_IN: '#999999'  // Light gray - scope
+  CONTAINS: '#666666',           // Gray - structural
+  CALLS: '#C73E1D',              // Red-brown - active
+  INHERITS: '#F18F01',           // Orange - important
+  IMPORTS: '#2E86AB',            // Blue - external
+  INSTANTIATES: '#6A994E',       // Green - creation
+  DEFINES_IN: '#999999',         // Light gray - scope
+  CALLS_RESOLVED: '#E63946',     // Bright red - resolved cross-file call
+  IMPORTS_RESOLVED_TO: '#457B9D', // Steel blue - resolved import
+  DEFINES_SYMBOL: '#999999',     // Light gray
+  USES: '#8338EC',               // Purple - usage
+  LOCATED_IN: '#AAAAAA',         // Lighter gray
 };
 
 // Node shape mapping by entity type
@@ -51,7 +56,12 @@ export const relationshipStyles = {
   INHERITS: { lineWidth: 3, dash: 'solid', arrow: 'triangle' },
   IMPORTS: { lineWidth: 1.5, dash: [6, 4], arrow: 'triangle' },
   INSTANTIATES: { lineWidth: 1.5, dash: [4, 3], arrow: 'triangle' },
-  DEFINES_IN: { lineWidth: 1, dash: 'solid', arrow: 'none' }
+  DEFINES_IN: { lineWidth: 1, dash: 'solid', arrow: 'none' },
+  CALLS_RESOLVED: { lineWidth: 2.5, dash: 'solid', arrow: 'triangle' },
+  IMPORTS_RESOLVED_TO: { lineWidth: 1.5, dash: [6, 4], arrow: 'triangle' },
+  DEFINES_SYMBOL: { lineWidth: 1, dash: 'solid', arrow: 'none' },
+  USES: { lineWidth: 1.5, dash: [3, 3], arrow: 'triangle' },
+  LOCATED_IN: { lineWidth: 1, dash: [4, 4], arrow: 'none' },
 };
 
 // Get node color by type

@@ -49,7 +49,7 @@ const App = () => {
     new Set(['FILE', 'MODULE', 'CLASS', 'FUNCTION', 'CONSTANT', 'VARIABLE', 'IMPORT', 'DECORATOR'])
   );
   const [selectedRelationshipTypes, setSelectedRelationshipTypes] = useState(
-    new Set(['CONTAINS', 'CALLS', 'INHERITS', 'IMPORTS', 'INSTANTIATES', 'DEFINES_IN'])
+    new Set(['CONTAINS', 'CALLS', 'INHERITS', 'IMPORTS', 'INSTANTIATES', 'DEFINES_IN', 'CALLS_RESOLVED', 'IMPORTS_RESOLVED_TO', 'USES'])
   );
 
   // Undo/Redo state
