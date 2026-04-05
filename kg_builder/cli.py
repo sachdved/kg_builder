@@ -122,7 +122,12 @@ def _run_build(args: argparse.Namespace) -> None:
         print(f"Error: Target path does not exist: {args.target}", file=sys.stderr)
         sys.exit(1)
 
-    kg = build_knowledge_graph_from_cli(args)
+    from kg_builder import build_knowledge_graph
+
+    if args.verbose:
+        print(f"Building knowledge graph from: {args.target}")
+
+    kg = build_knowledge_graph(str(target_path), exclude_patterns=args.exclude)
     output_json = kg.to_json()
 
     if args.output:
