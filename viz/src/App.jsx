@@ -12,11 +12,12 @@ import NewNodeModal from './components/NewNodeModal';
 import NewEdgeModal from './components/NewEdgeModal';
 import DiffPanel from './components/DiffPanel';
 import DiffSummary from './components/DiffSummary';
+import ShortestPathPanel from './components/ShortestPathPanel';
 
 // Utils
 import { parseKGToElements, getKGStats } from './utils/kgParser';
 import { entityColors, relationshipColors, nodeShapes } from './utils/styler';
-import { resetStyling, applyLayout } from './utils/graphHelpers';
+import { resetStyling, applyLayout, findShortestPath, highlightPath } from './utils/graphHelpers';
 import { getFocusStats, getNodeNeighborsByDirection } from './utils/neighborTraversal';
 import {
   createUndoRedoState,
@@ -79,6 +80,10 @@ const App = () => {
   const [baseKgData, setBaseKgData] = useState(null);
   const [showDiffPanel, setShowDiffPanel] = useState(false);
   const [showDiffColors, setShowDiffColors] = useState(true);
+
+  // Shortest path state
+  const [showPathPanel, setShowPathPanel] = useState(false);
+  const [pathResult, setPathResult] = useState(null);
 
   // Focus mode state
   const [focusMode, setFocusMode] = useState(false);
@@ -377,6 +382,56 @@ const App = () => {
     setSelectedElement(null);
     setHighlightedNodes([]);
   }, [baseKgData, selectedEntityTypes, selectedRelationshipTypes]);
+
+  // Shortest path handler
+  const handleFindPath = useCallback((sourceId, targetId) => {
+    if (!cyInstanceRef.current) return;
+
+    const cy = cyInstanceRef.current;
+    resetStyling(cy);
+
+    const result = findShortestPath(cy, sourceId, targetId);
+    if (!result || !result.path || result.path.length === 0) {
+      setPathResult({ found: false, hops: 0, steps: [] });
+      return;
+    }
+
+    const pathElements = result.path;
+    highlightPath(cy, pathElements);
+
+    // Build step list for display
+    const steps = [];
+    let hops = 0;
+    pathElements.forEach(el => {
+      if (el.isNode()) {
+        const entity = kgData?.entities?.[el.id()];
+        steps.push({
+          type: 'node',
+          id: el.id(),
+          name: entity?.name || el.id().split('::').pop(),
+          entityType: entity?.type || '?',
+        });
+      } else {
+        hops++;
+        steps.push({
+          type: 'edge',
+          relType: el.data('rel') || '?',
+        });
+      }
+    });
+
+    setPathResult({ found: true, hops, steps });
+
+    // Fit view to path
+    cy.fit(pathElements, 80);
+  }, [kgData]);
+
+  const handleClearPath = useCallback(() => {
+    setPathResult(null);
+    if (cyInstanceRef.current) {
+      resetStyling(cyInstanceRef.current);
+    }
+  }, []);
 
   // Handle element click — enter focus mode for nodes
   const handleElementClick = useCallback((element) => {
@@ -1108,6 +1163,8 @@ const App = () => {
         onAddRelationshipClick={() => setShowNewEdgeModal(true)}
         onDiffClick={() => setShowDiffPanel(prev => !prev)}
         diffActive={showDiffPanel}
+        onPathClick={() => { setShowPathPanel(prev => !prev); if (showDiffPanel) setShowDiffPanel(false); }}
+        pathActive={showPathPanel}
         diffSummaryComponent={
           <DiffSummary
             diffResult={diffResult}
@@ -1187,6 +1244,16 @@ const App = () => {
           onExportChangeSpec={handleExportChangeSpec}
           onResetToBase={handleResetToBase}
           hasBaseKg={!!baseKgData}
+        />
+
+        {/* Shortest Path Panel */}
+        <ShortestPathPanel
+          isOpen={showPathPanel}
+          onClose={() => setShowPathPanel(false)}
+          kgData={kgData}
+          onFindPath={handleFindPath}
+          pathResult={pathResult}
+          onClearPath={handleClearPath}
         />
 
         {/* Context Menu */}
