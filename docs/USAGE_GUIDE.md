@@ -18,7 +18,7 @@ The graph is the contract between you and the agent.
 ### Install
 
 ```bash
-pip install -e .
+pip install -e ".[mcp]"
 ```
 
 ### 1. Build a knowledge graph from your codebase
@@ -100,6 +100,71 @@ The agent knows:
 - Which specific entities are changing and how
 - What the neighboring code looks like (for context)
 - What might break (warnings)
+
+---
+
+## Setting Up in Another Repository
+
+To use kg_builder's tools in a different project (not the kg_builder repo itself):
+
+### 1. Install kg_builder with MCP support
+
+```bash
+pip install -e "/path/to/kg_builder[mcp]"
+```
+
+### 2. Create `.mcp.json` in your project root
+
+```json
+{
+  "mcpServers": {
+    "kg-builder": {
+      "type": "stdio",
+      "command": "/full/path/to/python",
+      "args": ["-m", "kg_builder.mcp_server"]
+    }
+  }
+}
+```
+
+**You must use the full Python path** — not `python` or `python3`. Find it with `which python` in the environment where you installed kg_builder. If using conda: `/Users/you/miniforge3/envs/your_env/bin/python`.
+
+If Claude Code doesn't pick up `.mcp.json`, also copy it to `.claude/mcp.json`:
+
+```bash
+mkdir -p .claude
+cp .mcp.json .claude/mcp.json
+```
+
+### 3. Create a CLAUDE.md in your project root
+
+**This is required.** Without it, the agent will ignore the KG tools and use grep/read instead. The agent needs to be told that KG tools exist and when to use them.
+
+```markdown
+# CLAUDE.md
+
+## Knowledge Graph Tools
+
+This project has a knowledge graph MCP server connected. The KG has
+parsed every Python file into a graph of entities and relationships.
+
+**Use the KG tools instead of grep/read for code discovery:**
+
+- `kg_find_entity("name")` — find classes/functions by name
+- `kg_get_neighbors(entity_id)` — see what calls/inherits/contains
+- `kg_get_callers(entity_id)` — find what calls a function
+- `kg_extract_context(entity_id)` — load source code + neighbors
+- `kg_impact_analysis("name")` — check risk before modifying
+- `kg_understand_function("name")` — full context for a function
+
+**Before writing code, query the KG first.**
+```
+
+### 4. Restart Claude Code and verify
+
+Exit and re-enter Claude Code. Run `/mcp` to confirm `kg-builder` is listed. The KG builds lazily on first tool call.
+
+See [MCP_SETUP.md](MCP_SETUP.md) for Cursor, Windsurf, and troubleshooting.
 
 ---
 

@@ -2,66 +2,68 @@
 
 kg_builder ships an MCP server that exposes 12 knowledge graph tools to any MCP-compatible coding agent. The agent can search entities, traverse relationships, extract code context, diff graphs, and generate edit plans — all as native tool calls.
 
-## Install
+## Setup requires three things
+
+1. **Install kg_builder** with the MCP dependency
+2. **Configure the MCP server** in your project so the agent can connect to it
+3. **Add a CLAUDE.md** telling the agent to use the KG tools (without this, the agent will ignore them and use grep/read instead)
+
+## Step 1: Install
 
 ```bash
-pip install -e ".[mcp]"
+pip install -e "/path/to/kg_builder[mcp]"
 ```
 
-## Configure
+**Important**: Use the full path to the Python binary in all MCP configs below. A bare `python` will use whatever's on your PATH, which may not have kg_builder installed. Find your path with:
+
+```bash
+which python
+# e.g., /Users/you/miniforge3/envs/kg_builder/bin/python
+```
+
+## Step 2: Configure the MCP server
 
 ### Claude Code
 
-Add to your project's `.claude/settings.json`:
+Create `.mcp.json` in your **project root** (the directory you open Claude Code in):
 
 ```json
 {
   "mcpServers": {
     "kg-builder": {
       "type": "stdio",
-      "command": "python",
+      "command": "/full/path/to/python",
       "args": ["-m", "kg_builder.mcp_server"]
     }
   }
 }
 ```
 
-Or for a specific project directory:
+Claude Code checks multiple locations for MCP config. If `.mcp.json` in the project root doesn't work, also create `.claude/mcp.json`:
 
-```json
-{
-  "mcpServers": {
-    "kg-builder": {
-      "type": "stdio",
-      "command": "python",
-      "args": ["-m", "kg_builder.mcp_server", "/path/to/project"]
-    }
-  }
-}
+```bash
+mkdir -p .claude
+cp .mcp.json .claude/mcp.json
 ```
 
-Restart Claude Code. The tools will appear in Claude's toolkit automatically.
+After creating the config, **restart Claude Code** (exit and re-enter). Verify the server connected by running `/mcp` — you should see `kg-builder` listed with 12 tools.
 
 ### Cursor
 
-Open Cursor Settings > MCP. Add a new server:
-
-- **Name**: kg-builder
-- **Type**: stdio
-- **Command**: `python -m kg_builder.mcp_server`
-
-Or edit `.cursor/mcp.json`:
+Create `.cursor/mcp.json` in your project root:
 
 ```json
 {
   "mcpServers": {
     "kg-builder": {
-      "command": "python",
+      "command": "/full/path/to/python",
       "args": ["-m", "kg_builder.mcp_server"]
     }
   }
 }
 ```
+
+Or add via Cursor Settings > MCP.
 
 ### Windsurf
 
@@ -71,7 +73,7 @@ Add to your Windsurf MCP configuration (Settings > MCP Servers):
 {
   "mcpServers": {
     "kg-builder": {
-      "command": "python",
+      "command": "/full/path/to/python",
       "args": ["-m", "kg_builder.mcp_server"]
     }
   }
@@ -88,7 +90,40 @@ kg_builder diff existing.json proposed.json --output changes.json
 kg_builder plan changes.json --codebase .
 ```
 
-Or use the Python API in a custom OpenAI function-calling wrapper.
+## Step 3: Add a CLAUDE.md (required)
+
+**This step is critical.** Even with the MCP server connected, the agent will default to its built-in tools (Grep, Read, Glob) for code exploration unless you tell it to use the KG tools instead.
+
+Create a `CLAUDE.md` in your project root:
+
+```markdown
+# CLAUDE.md
+
+## Knowledge Graph Tools
+
+This project has a knowledge graph MCP server connected. The KG has
+parsed every Python file in this repository into a graph of entities
+(classes, functions, variables, imports) and their relationships
+(calls, contains, inherits, imports).
+
+**Use the KG tools instead of grep/read for code discovery:**
+
+- `kg_find_entity("name")` — find classes/functions by name
+- `kg_get_neighbors(entity_id)` — see what an entity calls/inherits/contains
+- `kg_get_callers(entity_id)` — find what calls a given function
+- `kg_extract_context(entity_id)` — load source code for an entity and neighbors
+- `kg_impact_analysis("name")` — understand dependencies before modifying code
+- `kg_understand_function("name")` — get full context for a function
+
+**Before writing code, query the KG first** to understand which existing
+classes, methods, and models you should use.
+```
+
+Adapt the content to your project — add notes about your project structure, which directories matter, etc.
+
+### Why is CLAUDE.md necessary?
+
+The agent has dozens of built-in tools it already trusts. MCP tools are new and unfamiliar. Without explicit instructions, the agent will choose what it knows (grep for "options" across 300 files) over what it doesn't (call `kg_find_entity("options")` and get a precise answer). The CLAUDE.md bridges this gap.
 
 ## Available Tools
 
@@ -157,22 +192,23 @@ for name in sorted(tools):
 
 ## Troubleshooting
 
-**Server doesn't start**: Make sure `pip install -e ".[mcp]"` was run in the right environment. The `mcp` package must be installed.
+**Agent says "KG tools aren't available" or ignores them entirely**: Two possible causes:
+1. The MCP server isn't connected. Run `/mcp` in Claude Code to check. If `kg-builder` isn't listed, the config file is in the wrong location or the Python path is wrong. Try all three locations: `.mcp.json` (project root), `.claude/mcp.json`, and `.claude/settings.json`.
+2. The agent doesn't know it should use them. Add a `CLAUDE.md` (see Step 3 above). Without it, the agent will default to grep/read.
+
+**Server doesn't start**: Make sure `pip install -e ".[mcp]"` was run in the right environment. The `mcp` package must be installed. Test manually:
+```bash
+/full/path/to/python -c "from kg_builder.mcp_server import mcp; print(f'{len(mcp._tool_manager._tools)} tools')"
+```
+
+**`/mcp` shows the server but tools aren't used**: The CLAUDE.md is missing or too vague. The agent needs explicit instructions like "Use kg_find_entity instead of grep for code discovery." See the template in Step 3.
 
 **Tools return errors about missing KG**: The KG is built on first tool call. If parsing fails, check that the codebase path contains Python files and isn't excluded by the default patterns (`**/venv/*`, `**/node_modules/*`).
 
 **KG is stale after edits**: Call `kg_rebuild` to re-parse. The KG is cached in memory and doesn't auto-refresh when files change.
 
-**Python path issues**: The MCP server runs in whatever Python environment the `command` points to. If you're using conda/venv, use the full path:
-
-```json
-{
-  "mcpServers": {
-    "kg-builder": {
-      "type": "stdio",
-      "command": "/path/to/conda/envs/kg_builder/bin/python",
-      "args": ["-m", "kg_builder.mcp_server"]
-    }
-  }
-}
+**Python path issues**: The MCP server runs in whatever Python environment the `command` points to. A bare `python` may resolve to the wrong environment. Always use the full path:
+```bash
+# Find your path
+which python  # or: conda run -n your_env which python
 ```
