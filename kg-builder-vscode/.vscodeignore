@@ -1,0 +1,25 @@
+.vscode/**
+.vscode-test/**
+.gitignore
+.mocha蔟ests/**/*.js
+nyc_output/**
+README.md
+CHANGELOG.md
+CODEOWNERS
+.eslintrc**
+.prettierignore
+.prettierrc*
+.idea/**
+*.tsbuildinfo
+.yarnrc
+.yarn/**
+# Package files
+package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+# Coverage verification
+coverage/**
+# Typescript build
+*.ts
+out-test/**

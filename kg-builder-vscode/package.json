@@ -1,0 +1,201 @@
+{
+  "name": "kg-builder",
+  "displayName": "KG Builder - Python Knowledge Graph",
+  "description": "Build and visualize knowledge graphs from Python codebases. Understand dependencies, refactor safely, and explore code structure with interactive graph visualization.",
+  "version": "0.1.0",
+  "publisher": "kg-builder",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/kg-builder-vscode"
+  },
+  "homepage": "https://github.com/your-org/kg-builder-vscode#readme",
+  "icon": "resources/icons/kg-icon-128.png",
+  "galleryBanner": {
+    "color": "#1e1e1e",
+    "theme": "dark"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Visualization",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "python",
+    "knowledge graph",
+    "dependency",
+    "visualization",
+    "refactoring",
+    "ast",
+    "code analysis"
+  ],
+  "activationEvents": [
+    "onLanguage:python",
+    "workspaceContains:**/*.py"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "kgBuilder.buildWorkspace",
+        "title": "KG Builder: Build Workspace Knowledge Graph",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "kgBuilder.buildCurrentFile",
+        "title": "KG Builder: Build Current File"
+      },
+      {
+        "command": "kgBuilder.invalidateCache",
+        "title": "KG Builder: Invalidate Cache",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "kgBuilder.searchEntities",
+        "title": "KG Builder: Search Entities",
+        "icon": "$(search)"
+      },
+      {
+        "command": "kgBuilder.goToDefinition",
+        "title": "KG Builder: Go to Definition",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "kgBuilder.showCallHierarchy",
+        "title": "KG Builder: Show Call Hierarchy",
+        "icon": "$(call-hierarchy)"
+      },
+      {
+        "command": "kgBuilder.analyzeImpact",
+        "title": "KG Builder: Analyze Impact",
+        "icon": "$(warning)"
+      },
+      {
+        "command": "kgBuilder.extractContext",
+        "title": "KG Builder: Extract Function Context",
+        "icon": "$(symbol-method)"
+      },
+      {
+        "command": "kgBuilder.openGraphView",
+        "title": "KG Builder: Open Graph View",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "kgBuilder.exportKgJson",
+        "title": "KG Builder: Export KG JSON"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "kg-builder",
+          "title": "KG Builder",
+          "icon": "resources/icons/kg-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "kg-builder": [
+        {
+          "id": "kgBuilder.entityTree",
+          "name": "Entities"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "kgBuilder.entityTree",
+        "contents": "No knowledge graph loaded.\n[Build Knowledge Graph](command:kgBuilder.buildWorkspace)"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "kgBuilder.analyzeImpact",
+          "group": "navigation",
+          "when": "resourceLangId == python"
+        },
+        {
+          "command": "kgBuilder.extractContext",
+          "group": "navigation",
+          "when": "resourceLangId == python"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "kgBuilder.goToDefinition",
+          "when": "view == kgBuilder.entityTree && viewItem == kgEntity",
+          "group": "navigation"
+        },
+        {
+          "command": "kgBuilder.showCallHierarchy",
+          "when": "view == kgBuilder.entityTree && viewItem == kgEntity",
+          "group": "actions"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "kgBuilder.searchEntities",
+          "when": "view == kgBuilder.entityTree",
+          "group": "navigation"
+        },
+        {
+          "command": "kgBuilder.buildWorkspace",
+          "when": "view == kgBuilder.entityTree",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "KG Builder",
+      "properties": {
+        "kgBuilder.autoBuildOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically rebuild KG on file save"
+        },
+        "kgBuilder.excludePatterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/venv/**",
+            "**/.venv/**",
+            "**/node_modules/**",
+            "**/__pycache__/**",
+            "**/tests/**"
+          ],
+          "description": "Glob patterns to exclude when building KG"
+        },
+        "kgBuilder.maxEntityCount": {
+          "type": "integer",
+          "default": 5000,
+          "description": "Maximum entities to load in graph view"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "tsc -p ./ && npm run build:webview",
+    "build:webview": "node build/webview.mjs",
+    "watch": "tsc --watch",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.90.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "esbuild": "^0.20.0"
+  }
+}
