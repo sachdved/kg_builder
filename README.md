@@ -53,6 +53,8 @@ pip install -e ".[mcp]"
 
 ### Use with Claude Code (or Cursor / Windsurf)
 
+**Quick setup for Cursor:** See [docs/CURSOR_INTEGRATION.md](docs/CURSOR_INTEGRATION.md) for a 5-minute setup guide.
+
 **1. Create `.mcp.json` in your project root:**
 
 ```json
@@ -67,7 +69,7 @@ pip install -e ".[mcp]"
 }
 ```
 
-Use the full Python path (`which python` in your kg_builder environment).
+Use the full Python path (`which python` in your kg_builder environment). Or copy `.cursor-mcp-example.json` as a starting point.
 
 **2. Create a `CLAUDE.md` in your project root:**
 
@@ -171,8 +173,12 @@ This gives you architectural review before any code is written. See [docs/USAGE_
 
 ## Documentation
 
+### Getting Started
+- [Cursor Integration Guide](docs/CURSOR_INTEGRATION.md) — 5-minute setup for Cursor users
+- [MCP Setup Guide](docs/MCP_SETUP.md) — configuration for Claude Code, Cursor, Windsurf
+
+### Usage & Reference
 - [Usage Guide](docs/USAGE_GUIDE.md) — workflows, CLI reference, measurement framework
-- [MCP Setup](docs/MCP_SETUP.md) — configuration for Claude Code, Cursor, Windsurf
 - [CLAUDE.md](CLAUDE.md) — architecture reference for agents working on this repo
 
 ## Development
