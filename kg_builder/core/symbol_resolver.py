@@ -10,7 +10,7 @@ import ast
 from pathlib import Path
 from typing import Optional
 
-from kg_builder.models import Entity, EntityType, Relationship, RelationshipType
+from kg_builder.core.models import Entity, EntityType, Relationship, RelationshipType
 
 
 class SymbolResolver:

@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
-from kg_builder.kg_diff import ChangeSpec, EntityChange
+from kg_builder.planning.kg_diff import ChangeSpec, EntityChange
 
 
 @dataclass

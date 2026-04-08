@@ -6,7 +6,7 @@ and its neighbors, organized by file for efficient token usage.
 
 from typing import Optional
 
-from kg_builder.models import KnowledgeGraph
+from kg_builder.core.models import KnowledgeGraph
 
 
 def kg_extract_context(
@@ -63,7 +63,7 @@ def kg_extract_context(
         }
     """
     try:
-        from kg_builder.query_engine import KGQueryEngine
+        from kg_builder.core.query_engine import KGQueryEngine
 
         # Validate entity exists
         if entity_id not in kg.entities:

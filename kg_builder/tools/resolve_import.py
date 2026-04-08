@@ -4,7 +4,7 @@ This module provides kg_resolve_import() for resolving import statements
 to their actual definitions in the codebase.
 """
 
-from kg_builder.models import KnowledgeGraph
+from kg_builder.core.models import KnowledgeGraph
 
 
 def kg_resolve_import(
@@ -48,7 +48,7 @@ def kg_resolve_import(
         }
     """
     try:
-        from kg_builder.symbol_resolver import SymbolResolver
+        from kg_builder.core.symbol_resolver import SymbolResolver
 
         # Validate entity exists and is an IMPORT type
         if import_entity_id not in kg.entities:
@@ -86,7 +86,7 @@ def kg_resolve_import(
             resolved_entity = kg.entities[resolved_id]
 
             # Check for EXTERNAL_REF type
-            from kg_builder.models import EntityType
+            from kg_builder.core.models import EntityType
 
             if resolved_entity.type == EntityType.EXTERNAL_REF:
                 is_external = True

@@ -6,14 +6,14 @@ from pathlib import Path
 
 import pytest
 
-from kg_builder.agent_planner import (
+from kg_builder.planning.agent_planner import (
     EditPlan,
     FileEdit,
     generate_edit_plan,
     _infer_file_path,
     _describe_file_edit,
 )
-from kg_builder.kg_diff import (
+from kg_builder.planning.kg_diff import (
     ChangeSpec,
     EntityChange,
     RelationshipChange,

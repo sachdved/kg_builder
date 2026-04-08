@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from kg_builder.round_trip import run_round_trip
+from kg_builder.planning.round_trip import run_round_trip
 
 
 def _make_entity(eid, name, etype="FUNCTION", file_path="f.py", line_number=1):

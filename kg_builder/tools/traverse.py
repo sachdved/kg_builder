@@ -6,7 +6,7 @@ starting entities, useful for impact analysis and code flow understanding.
 
 from typing import Optional
 
-from kg_builder.models import KnowledgeGraph, RelationshipType
+from kg_builder.core.models import KnowledgeGraph, RelationshipType
 
 
 def kg_traverse(
@@ -68,7 +68,7 @@ def kg_traverse(
         }
     """
     try:
-        from kg_builder.query_engine import KGQueryEngine
+        from kg_builder.core.query_engine import KGQueryEngine
 
         # Validate at least one start entity exists
         valid_starts = [eid for eid in start_entity_ids if eid in kg.entities]

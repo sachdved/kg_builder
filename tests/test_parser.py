@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from kg_builder.models import Entity, EntityType, KnowledgeGraph, Relationship, RelationshipType
-from kg_builder.parser import parse_file
+from kg_builder.core.models import Entity, EntityType, KnowledgeGraph, Relationship, RelationshipType
+from kg_builder.core.parser import parse_file
 
 
 # Sample Python code for testing
@@ -231,7 +231,7 @@ class TestRelationshipDetection:
 
     def test_contains_relationship(self, tmp_path: Path) -> None:
         """Test CONTAINS relationships between class and methods."""
-        from kg_builder.relationship_finder import find_all_relationships
+        from kg_builder.core.relationship_finder import find_all_relationships
 
         import ast
 
@@ -248,7 +248,7 @@ class TestRelationshipDetection:
 
     def test_inherits_relationship(self, tmp_path: Path) -> None:
         """Test INHERITS relationships."""
-        from kg_builder.relationship_finder import find_all_relationships
+        from kg_builder.core.relationship_finder import find_all_relationships
 
         import ast
 
@@ -264,7 +264,7 @@ class TestRelationshipDetection:
 
     def test_calls_relationship(self, tmp_path: Path) -> None:
         """Test CALLS relationships."""
-        from kg_builder.relationship_finder import find_all_relationships
+        from kg_builder.core.relationship_finder import find_all_relationships
 
         import ast
 

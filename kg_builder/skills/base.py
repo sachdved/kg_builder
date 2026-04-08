@@ -8,7 +8,7 @@ formatting helpers, and lazy symbol table building.
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
-from kg_builder.models import Entity, KnowledgeGraph, Relationship
+from kg_builder.core.models import Entity, KnowledgeGraph, Relationship
 
 
 class BaseSkill(ABC):
@@ -53,7 +53,7 @@ class BaseSkill(ABC):
     def engine(self):
         """Lazy initialization of KGQueryEngine."""
         if self._engine is None:
-            from kg_builder.query_engine import KGQueryEngine
+            from kg_builder.core.query_engine import KGQueryEngine
             self._engine = KGQueryEngine(self.kg)
         return self._engine
 
@@ -61,7 +61,7 @@ class BaseSkill(ABC):
     def resolver(self):
         """Lazy initialization of SymbolResolver with symbol table building."""
         if self._resolver is None:
-            from kg_builder.symbol_resolver import SymbolResolver
+            from kg_builder.core.symbol_resolver import SymbolResolver
             self._resolver = SymbolResolver(self.kg)
             self._resolver.build_symbol_table()
         return self._resolver

@@ -3,7 +3,7 @@
 from collections import deque
 from typing import Optional
 
-from kg_builder.models import KnowledgeGraph, RelationshipType
+from kg_builder.core.models import KnowledgeGraph, RelationshipType
 
 
 class KGQueryEngine:

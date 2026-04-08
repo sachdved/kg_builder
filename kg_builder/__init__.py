@@ -15,12 +15,18 @@ Example usage:
     print(kg.to_json())
 """
 
-from kg_builder.models import Entity, EntityType, KnowledgeGraph, Relationship, RelationshipType
-from kg_builder.parser import parse_file
-from kg_builder.query_engine import KGQueryEngine
-from kg_builder.symbol_resolver import SymbolResolver
-from kg_builder.kg_diff import ChangeSpec, diff_knowledge_graphs
-from kg_builder.agent_planner import EditPlan, generate_edit_plan
+from kg_builder.core.models import (
+    Entity,
+    EntityType,
+    KnowledgeGraph,
+    Relationship,
+    RelationshipType,
+)
+from kg_builder.core.parser import parse_file
+from kg_builder.core.query_engine import KGQueryEngine
+from kg_builder.core.symbol_resolver import SymbolResolver
+from kg_builder.planning.kg_diff import ChangeSpec, diff_knowledge_graphs
+from kg_builder.planning.agent_planner import EditPlan, generate_edit_plan
 
 
 def build_knowledge_graph(
@@ -43,8 +49,8 @@ def build_knowledge_graph(
     """
     import ast
 
-    from kg_builder.relationship_finder import find_all_relationships
-    from kg_builder.utils import get_python_files
+    from kg_builder.core.relationship_finder import find_all_relationships
+    from kg_builder.core.utils import get_python_files
 
     kg = KnowledgeGraph()
     files = list(get_python_files(target_path, exclude_patterns))
@@ -123,7 +129,7 @@ __all__ = [
 ]
 
 # Import agent helpers for convenience
-from kg_builder.agent_helper import (  # noqa: E402
+from kg_builder.agents.agent_helper import (  # noqa: E402
     understand_function,
     analyze_impact,
     find_all_by_pattern,

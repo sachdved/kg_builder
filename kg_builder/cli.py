@@ -14,10 +14,10 @@ import json
 import sys
 from pathlib import Path
 
-from kg_builder.models import KnowledgeGraph
-from kg_builder.parser import parse_file
-from kg_builder.relationship_finder import find_all_relationships
-from kg_builder.utils import get_python_files
+from kg_builder.core.models import KnowledgeGraph
+from kg_builder.core.parser import parse_file
+from kg_builder.core.relationship_finder import find_all_relationships
+from kg_builder.core.utils import get_python_files
 
 
 SUBCOMMANDS = {"build", "diff", "plan"}
@@ -137,7 +137,7 @@ def _run_build(args: argparse.Namespace) -> None:
 
 
 def _run_diff(args: argparse.Namespace) -> None:
-    from kg_builder.kg_diff import diff_knowledge_graphs, save_change_spec
+    from kg_builder.planning.kg_diff import diff_knowledge_graphs, save_change_spec
 
     existing_path = Path(args.existing)
     proposed_path = Path(args.proposed)
@@ -173,8 +173,8 @@ def _run_diff(args: argparse.Namespace) -> None:
 
 
 def _run_plan(args: argparse.Namespace) -> None:
-    from kg_builder.agent_planner import generate_edit_plan
-    from kg_builder.kg_diff import ChangeSpec
+    from kg_builder.planning.agent_planner import generate_edit_plan
+    from kg_builder.planning.kg_diff import ChangeSpec
 
     spec_path = Path(args.change_spec)
     if not spec_path.is_file():

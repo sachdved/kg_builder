@@ -36,8 +36,8 @@ def kg_generate_plan(
         }
     """
     try:
-        from kg_builder.agent_planner import generate_edit_plan
-        from kg_builder.kg_diff import ChangeSpec
+        from kg_builder.planning.agent_planner import generate_edit_plan
+        from kg_builder.planning.kg_diff import ChangeSpec
 
         # Load change spec
         with open(change_spec_path, "r", encoding="utf-8") as f:

@@ -230,7 +230,7 @@ def kg_diff(
         existing_kg_path: Path to the base/existing KG JSON file
         proposed_kg_path: Path to the proposed KG JSON file
     """
-    from kg_builder.kg_diff import diff_knowledge_graphs
+    from kg_builder.planning.kg_diff import diff_knowledge_graphs
 
     with open(existing_kg_path, "r") as f:
         existing = json.load(f)
@@ -256,8 +256,8 @@ def kg_generate_plan(
         change_spec_path: Path to the change spec JSON file
         existing_kg_path: Optional path to existing KG JSON (for loading neighbor code context)
     """
-    from kg_builder.agent_planner import generate_edit_plan
-    from kg_builder.kg_diff import ChangeSpec
+    from kg_builder.planning.agent_planner import generate_edit_plan
+    from kg_builder.planning.kg_diff import ChangeSpec
 
     with open(change_spec_path, "r") as f:
         spec = ChangeSpec.from_json(f.read())
@@ -286,7 +286,7 @@ def kg_impact_analysis(
         depth: How many hops of dependencies to check (1-3)
     """
     _ensure_kg()
-    from kg_builder.agent_helper import analyze_impact
+    from kg_builder.agents.agent_helper import analyze_impact
 
     result = analyze_impact(entity_name, codebase=_get_codebase_path(), depth=depth)
     return json.dumps(result)
@@ -302,7 +302,7 @@ def kg_understand_function(
         function_name: Name of the function to understand
     """
     _ensure_kg()
-    from kg_builder.agent_helper import understand_function
+    from kg_builder.agents.agent_helper import understand_function
 
     result = understand_function(function_name, codebase=_get_codebase_path())
     return json.dumps(result)

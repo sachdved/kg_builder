@@ -12,8 +12,8 @@ import json
 from pathlib import Path
 from typing import Any, Optional
 
-from kg_builder.agent_planner import EditPlan, generate_edit_plan
-from kg_builder.kg_diff import ChangeSpec, diff_knowledge_graphs
+from kg_builder.planning.agent_planner import EditPlan, generate_edit_plan
+from kg_builder.planning.kg_diff import ChangeSpec, diff_knowledge_graphs
 
 
 def run_round_trip(
