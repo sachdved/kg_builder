@@ -45,3 +45,13 @@ htmlcov/
 # Outputs
 outputs/
 output/
+
+# Viz build artifacts
+viz/package-lock.json
+
+# VSCode extension
+kg-builder-vscode/node_modules/
+
+# MCP example configs (user-specific)
+.cursor-mcp-example.json
+.mcp.json
