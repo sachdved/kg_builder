@@ -23,7 +23,7 @@ Example usage:
 import re
 from typing import Any, Callable, Optional
 
-from kg_builder.models import KnowledgeGraph
+from kg_builder.core.models import KnowledgeGraph
 
 
 # Skill registry mapping skill names to handler classes

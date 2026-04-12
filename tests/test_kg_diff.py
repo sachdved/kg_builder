@@ -3,7 +3,7 @@
 import json
 import pytest
 
-from kg_builder.kg_diff import (
+from kg_builder.planning.kg_diff import (
     ChangeSpec,
     EntityChange,
     RelationshipChange,

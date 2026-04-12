@@ -3,8 +3,8 @@
 import ast
 from typing import Any
 
-from kg_builder.models import Entity, EntityType
-from kg_builder.utils import generate_entity_id, is_constant_name
+from kg_builder.core.models import Entity, EntityType
+from kg_builder.core.utils import generate_entity_id, is_constant_name
 
 
 def parse_file(file_path: str) -> tuple[list[Entity], list[Entity]]:

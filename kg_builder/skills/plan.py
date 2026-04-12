@@ -18,8 +18,8 @@ class PlanSkill(BaseSkill):
     """
 
     def run(self) -> str:
-        from kg_builder.agent_planner import generate_edit_plan
-        from kg_builder.kg_diff import ChangeSpec
+        from kg_builder.planning.agent_planner import generate_edit_plan
+        from kg_builder.planning.kg_diff import ChangeSpec
 
         # Get arguments
         spec_path = self.get_arg("target") or self.get_arg("entity_name")

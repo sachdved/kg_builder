@@ -6,7 +6,7 @@ with optional type filtering and fuzzy matching.
 
 from typing import Optional
 
-from kg_builder.models import KnowledgeGraph
+from kg_builder.core.models import KnowledgeGraph
 
 
 def kg_find_entity(
@@ -59,7 +59,7 @@ def kg_find_entity(
     """
     try:
         # Use the query engine for searching
-        from kg_builder.query_engine import KGQueryEngine
+        from kg_builder.core.query_engine import KGQueryEngine
 
         engine = KGQueryEngine(kg)
         entity_ids = engine.search_by_name(query, fuzzy=fuzzy)

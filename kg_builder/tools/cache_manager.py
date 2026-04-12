@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Optional
 
 from kg_builder import build_knowledge_graph
-from kg_builder.models import KnowledgeGraph
+from kg_builder.core.models import KnowledgeGraph
 
 
 class KGCacheManager:

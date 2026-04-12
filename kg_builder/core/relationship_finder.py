@@ -3,8 +3,8 @@
 import ast
 from typing import Any
 
-from kg_builder.models import Entity, EntityType, Relationship, RelationshipType
-from kg_builder.utils import generate_entity_id
+from kg_builder.core.models import Entity, EntityType, Relationship, RelationshipType
+from kg_builder.core.utils import generate_entity_id
 
 
 def find_all_relationships(

@@ -6,7 +6,7 @@ to a given entity through relationships.
 
 from typing import Optional
 
-from kg_builder.models import KnowledgeGraph, RelationshipType
+from kg_builder.core.models import KnowledgeGraph, RelationshipType
 
 
 def kg_get_neighbors(
@@ -58,7 +58,7 @@ def kg_get_neighbors(
         }
     """
     try:
-        from kg_builder.query_engine import KGQueryEngine
+        from kg_builder.core.query_engine import KGQueryEngine
 
         # Validate entity exists
         if entity_id not in kg.entities:

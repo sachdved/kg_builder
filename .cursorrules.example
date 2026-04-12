@@ -1,0 +1,76 @@
+# kg_builder Knowledge Graph - Cursor Rules Template
+
+Copy this file to `.cursorrules` in your project root to enable optimal kg_builder usage.
+
+---
+
+## Knowledge Graph Tools Available
+
+This project has kg_builder MCP tools connected. **Always query the knowledge graph before reading files or making changes.**
+
+### Available Tools
+
+- `kg_find_entity(query, entity_type)` — Find classes/functions/variables by name
+- `kg_get_neighbors(entity_id, direction)` — Get adjacent entities (incoming/outgoing/both)
+- `kg_get_callers(entity_id, max_depth)` — Find what calls this entity
+- `kg_extract_context(entity_id, max_hops)` — Load code with neighbor context
+- `kg_impact_analysis(name, depth)` — Assess change risk before editing
+- `kg_understand_function(name)` — Full function context (code + callers + dependencies)
+- `kg_rebuild()` — Refresh the graph after file changes
+
+### Workflow Guidelines
+
+1. **Query first**: Use `kg_find_entity` instead of grep or盲目 file reading
+2. **Check impact**: Call `kg_impact_analysis` before proposing refactoring
+3. **Get context**: Use `kg_extract_context(max_hops=1)` for code + dependencies
+4. **Refresh when needed**: Call `kg_rebuild()` if files changed since last query
+
+### Example Query Pattern
+
+**Task:** "Add validation to User.create()"
+
+```
+1. kg_find_entity("User", entity_type="CLASS") → find the class
+2. kg_get_neighbors("user.py::User", direction="outgoing") → find methods including create()
+3. kg_extract_context("user.py::User::create", max_hops=1) → get code + neighbors
+4. Make the edit with full context
+```
+
+This approach is **faster** and **more accurate** than reading files blindly.
+
+---
+
+## Common Task Patterns
+
+### Finding Entry Points
+```
+kg_find_entity("main", fuzzy=true)
+kg_find_entity("app", entity_type="CLASS")
+kg_traverse("path.py::main", max_hops=2)
+```
+
+### Understanding a Feature
+```
+kg_understand_function("feature_function_name")
+```
+
+### Safe Refactoring
+```
+kg_impact_analysis("function_to_change", depth=2)
+# Review risk level and affected files before proceeding
+```
+
+### Tracing Call Chains
+```
+kg_get_callers("target_function", max_depth=2)
+kg_get_neighbors("entity_id", direction="outgoing", relationship_types="CALLS")
+```
+
+---
+
+## Important Notes
+
+- The KG is built on first access — expect a slight delay for the initial query
+- Subsequent queries are fast (in-memory graph)
+- Call `kg_rebuild()` after significant file changes
+- Entity IDs use format: `filepath.py::ClassName::method_name`

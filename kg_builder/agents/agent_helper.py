@@ -5,7 +5,7 @@ making code changes to understand the context and impact of their modifications.
 
 Example usage:
 
-    from kg_builder.agent_helper import understand_function, analyze_impact
+    from kg_builder.agents.agent_helper import understand_function, analyze_impact
 
     # Before modifying a function, understand it first
     info = understand_function("parse_file", ".")

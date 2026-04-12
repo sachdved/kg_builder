@@ -10,7 +10,7 @@ import pytest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from kg_builder.models import (
+from kg_builder.core.models import (
     Entity, EntityType, KnowledgeGraph, Relationship, RelationshipType,
 )
 

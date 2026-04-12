@@ -9,7 +9,7 @@ Usage:
 
 from typing import Any
 
-from kg_builder.models import KnowledgeGraph, RelationshipType
+from kg_builder.core.models import KnowledgeGraph, RelationshipType
 from kg_builder.skills.base import BaseSkill
 from kg_builder.skills import register_skill
 
